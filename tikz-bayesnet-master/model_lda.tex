@@ -1,0 +1,65 @@
+% model_lda.tex
+%
+% Copyright (C) 2010,2011 Laura Dietz
+% Copyright (C) 2012 Jaakko Luttinen
+%
+% This file may be distributed and/or modified
+%
+% 1. under the LaTeX Project Public License and/or
+% 2. under the GNU General Public License.
+%
+% See the files LICENSE_LPPL and LICENSE_GPL for more details.
+
+% Latent Diriclet allocation model
+
+%\beginpgfgraWcnamed{model-lda}
+\begin{tikzpicture}[x=1.7cm,y=1.8cm]
+
+  % Nodes
+
+  \node[obs]                   (X)      {$x_j$} ; %
+  \node[latent, left=of X]    (B)      {$b_j$} ; %
+  \node[latent, above=of X]    (H)      {$h_i$} ; %
+  \node[latent, left=of H]    (C)  {$c_i$}; %
+  %\node[const, left=of C] (ac) {$\alpha_c$};
+  %\node[const, left=of B] (ab) {$\alpha_b$};
+
+
+  % Factors
+  \factor[above=of X]     {X-f}     {left:$\exp(h^TWx)$} {} {} ; %
+  \factor[left=of H]     {Hg}     {above:$gh$} {} {} ; %
+  \factor[left=of X]     {Xg}     {above:$gz$} {} {} ; %
+  \factor[right=of C, left=of Hg]     {Cg}     {above:$gc$} {} {} ; %
+  \factor[right=of B]     {Bg}     {above:$gb)$} {} {} ; %
+  \factor[left=of C] {C-f} {above:$P_0(c)$} {} {} ; %
+   \factor[left=of B] {B-f} {above:$P_0(b)$} {} {} ; %
+
+  % More nodes
+  \node[latent, right=of X-f] (W)  {$W_{ij}$}; %
+  %\node[const, above=of W]  (aW) {$\alpha_W$}; %
+
+  \factor[above=of W] {W-f} {left:$P_0(W)$} {} {} ; %
+
+  \factoredge[-] {H}  {Hg}     {} ; %
+  \factoredge[-] {X} 	{Xg} 	{} ; %
+  \factoredge[-] {C}  {Cg}     {} ; %
+  \factoredge[-] {B} 	{Bg} 	{} ; %
+  \factoredge[-] {W}    {X-f}     {X} ; %
+  \factoredge[-] {H}    {X-f}     {X} ; %
+  \factoredge[-] {W}   {W-f}   {} ; %
+ 	\factoredge[-] {C}    {C-f}	{}
+  \factoredge[-] {B}    {B-f}	{}
+
+  \gate {bx} {(B)(Xg-caption)(X)} {}
+  \gate {ch} {(C)(Hg-caption)(H)} {}
+  \gate {xhW} {(X)(W)(H)} {}
+  
+  %\plate {xh} {(X)(H)} {$m = 1:N$}  
+
+\end{tikzpicture}
+%\endpgfgraphicnamed
+
+%%% Local Variables: 
+%%% mode: tex-pdf
+%%% TeX-master: "example"
+%%% End: 

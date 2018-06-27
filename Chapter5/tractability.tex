@@ -1,0 +1,111 @@
+\section{Revisiting tractability issues in approximate inference}
+\label{sec:chap5_wild_concept}
+
+In Chapter \ref{chap:intro} the definition of an approximate inference procedure is identified. However, here I invite the readers to consider the following question again:
+\begin{center}
+\emph{What does tractability mean for an approximate inference algorithm?}
+\end{center}
+
+This question touches the fundamental principles of approximate inference and it is very important answer it carefully. It helps us to understand the challenges that we face, and identify those that can be addressed by investing more \emph{computational} resources, and those that require advanced \emph{mathematical} tools. 
+%
+Think about the history of neural networks research as an analogy. The first challenge in the late 1960s came from \emph{theoretical} limitations of perceptrons \citep{minsky:perceptrons1969}, and the second issue in the last ten years of the 20th century was mainly the lack of \emph{computational resources} (e.g.~slow computers and small datasets) \citep{lecun:deeplearning2015}. It was only after identifying and addressing these two issues (back-propagation \citep{rumelhart:backprop1986}, faster machine, GPU computing and big data) that the deep learning community started to revolutionise AI applications in the real world. But still, there are mathematical and computational challenges for modern deep learning which are waiting for discoveries and solutions, but these issues are out of the scope of our discussions.
+
+To answer the above question, we first start by revisiting the definition of \emph{approximate inference}, with Bayesian posterior inference as an illustrating example. Assume a model with prior distribution $p(\z)$ and likelihood function $p(\x | \z)$. Then \emph{inference} means computing the expectation of some function $F(\z)$ of interest under the exact posterior, which is $\mathbb{E}_{p(\z|\x)} [ F(\z)]$. 
+Examples of such $F$ functions include $F(\z) = \z$, $F(\z) = \z \z^{\text{T}}$ (i.e.~computing the moments of $p$), $F(\z) = p(\y^*|\z, \x^*)$ if in supervised learning and $\z$ represents the model parameters (i.e.~computing a predictive distribution), and $F(\z) = \delta_{A}$ if one wishes to evaluate the distribution directly $p(\z \in A | \x) = \mathbb{E}_{p(\z | \x)}[ \delta_{A} ]$.
+%
+For simplicity in the rest of the discussion we assume the evaluation of $F(\z)$ can be done using available computational resources, otherwise it needs more approximations.
+
+%
+The core idea of (optimisation based) approximate inference is to fit an approximate posterior distribution $q(\bm{z}|\bm{x})$ in a ``tractable'' distribution family $\mathcal{Q}$ to the exact posterior $p(\z | \x)$, such that $\mathbb{E}_{p(\z|\x)}[F(\z)]$ can be well approximated by
+\begin{equation}
+\mathbb{E}_{p(\z|\x)}[F(\z)] \approx \mathbb{E}_{q(\z|\x)}[F(\z)]. 
+\label{eq:chap5_approx_predict}
+\end{equation}
+Critically, the primary tractability requirement here for the approximate posterior is the \emph{fast computation} of the \emph{approximate expectation} on the RHS given the function $F$.
+
+Historically, approximate distributions of simple forms, such as mean-field approximations and factorised Gaussians \citep{jordan:vi1999}, have been proposed to obtain analytical solutions of the approximated expectation. These approaches often require the probabilistic model to comprise conjugate exponential families, which excludes a broad range of powerful models, e.g.~those which warp noise variables through non-linear mappings. Instead, modern approximate inference introduces Monte Carlo (MC) estimation techniques to approximate the predictive likelihood \citep{paisley:bbvi2012,ranganath:bbvi2014} that we reviewed in Section \ref{sec:chap2_mcvi}. The MC method enables a wider class of models to be amendable to VI (the requirement is that the log-joint can be computed point-wise), and is key to modern training methods of generative models such as deep latent variable models. \citep{kingma:vae2014, rezende:vae2014}.
+%
+
+Precisely, at inference time, the MC approximation method samples $\{\z^1, ..., \z^K \}$ from the approximate posterior $q$, and estimates the required quantity by
+\begin{equation}
+\mathbb{E}_{q(\z|\x)}[F(\z)] \approx \frac{1}{K} \sum_{k=1}^K F(\z^k), \quad \z^k \sim q(\z|\x).
+\label{eq:chap5_approx_predict_mc}
+\end{equation}
+Consequently, this converts the fast expectation computation requirement to \emph{fast sampling} from the approximate posterior, as the expectation is further approximated by the empirical average. Fast sampling is arguably a stronger condition compared to \emph{fast expectation computation} for a \emph{given} function $F$. 
+%
+The latter option typically prefers traditional numerical integration methods since for different functions one would select different quadrature rules. On the other hand, fast sampling can also be a weaker condition: once we have obtained the samples from the approximate posterior, we can use them to compute an empirical estimate of the expectation for \emph{any} integrable function. Hence methods that entail fast sampling might be preferred for tasks that require estimating expectations of a set of functions.
+
+Unfortunately, except a few very recent attempts that will be detailed later, most approximate inference algorithms impose further constraints to the design of $q$. For example, MC-VI requires \emph{fast density evaluation} and/or \emph{fast density gradient evaluation} for $q(\z | \x)$ given a configuration of $\z$. Importantly, this requirement is only presented in the VI optimisation procedure to seek for the best fit of $q$: once a (local) optimum is obtained, inference only requires evaluating the empirical expectation, thus there is no need to compute the density point-wise. Therefore the MC inference at test time enables the usage of \emph{implicit distributions} \citep{diggle:prescribe_implicit1984,mohamed:gan2016} and \emph{stochastic regularisation techniques (SRTs)} \citep[e.g.~dropout techniques, see][]{srivastava:dropout2014, wan:dropconnect2013, singh:swapout2016, krueger:zoneout2017, kingma:variational_dropout2015, gal:uncertainty2016} that allow for the computation of the MC predictive inference but not for fast density evaluation. But again at training time they are not applicable to traditional variational methods due to the fast density evaluation constraint. 
+
+These observations raise an outstanding research question: 
+\begin{center}
+\emph{Can we design efficient approximate inference algorithms to train arbitrary posterior approximations (including implicit distributions and SRTs)?}
+\end{center}
+
+We will answer this in the next sections, by discussing proposals for training \emph{wild approximate inference algorithms}.\footnote{Not to be confused with \emph{black-box} variational inference \citep{ranganath:bbvi2014}.} We will also provide some examples of implicit posterior approximations that are not possible to be fitted using conventional approximate inference algorithms. Before that, I first address potential skepticism below, and argue why this is an outstanding but under-examined research direction.
+
+\vspace{1em}
+\begin{tcolorbox}
+\textbf{Remark} (a comparison between implicit distributions and SRTs)\textbf{.}
+As presented, it is desirable to remove the fast density evaluation constraint from the fitting procedure. However the reasons for doing so are different for implicit distributions and SRTs. First for implicit distributions, MC samples $\z^1, ..., \z^K$ are generated (e.g.~by warping noise variables with a neural network), in order to compute the empirical estimate $\frac{1}{K} \sum_{k=1}^K F(\z^k)$. The fast density evaluation constraint becomes an obstacle for fitting implicit distributions, as the underlying distribution of the samples does not exhibit a tractable form. 
+
+On the other hand, in Bayesian neural networks the function $F$ is usually defined using the outputs of the neural network, i.e.~$F(\z) = \frac{1}{N} \sum_{n=1}^N \tilde{F}(\y_n = \text{NN}_{\z}(\x_n))$. Unlike implicit distributions, SRTs often apply random transformations to the hidden units, which leads to random outputs $\y_n^k, n=1, ..., N, k=1, ..., K$ and the empirical estimate $\frac{1}{KN} \sum_{k=1}^K \sum_{n=1}^N \tilde{F}(\y_n^k)$. More importantly, the random transformations applied to \emph{different} inputs $\x_n$ are \emph{different}, which is equivalent to sampling $NK$ sets of weights $\z^{k, n}, n=1, ..., N, k=1, ..., K$ \emph{implicitly}. 
+%
+Therefore even the underlying density of $\z^{k, n}$ might be tractable point-wise (consider Gaussian dropout \citep{srivastava:dropout2014, kingma:variational_dropout2015} as an example), evaluating them explicitly would cost $\mathcal{O}(NK)$ time or $\mathcal{O}(NK)$ memory for parallel computing. Therefore the fast density evaluation constraint becomes an obstacle again but for a different reason: intractability due to limited computational budget.
+\end{tcolorbox}
+
+\subsection{Is it necessary to evaluate the approximate posterior distribution?}
+
+One might argue that having an accessible $q$ distribution allows the user to understand the properties of the exact posterior better. It might be true for low dimensional cases, as we can easily visualise the density function, and compare density values between samples to determine which is more probable. But I would disagree with this argument for the scenario of approximating multi-modal posterior distributions in high dimensions, which is often the application regime of interest. Some reasons are:
+\begin{itemize}
+\item First, enforcing the tractable density constraint means that in many cases, either we fit the posterior with a rather simple distribution (which has limited representational power), or a complex model such as a mixture density (which entails high computational costs). 
+
+\item Second, even when setting aside the computational issues for density evaluation, visualising high dimensional distributions is itself still an open research problem. In this regard, many data visualisation techniques consider dimension reduction methods such as principal component analysis (PCA) \citep{pearson:pca1901}, self-organising map \citep{kohonen:som1998, venna:som2003} and t-SNE \citep{maaten:tsne2008}, which in fact only require samples from the distribution, not the density values. 
+
+\item Finally as motivated above, many MC-based inference tasks do not require evaluating or comparing density values on samples. For those which do require density evaluation, one can then fit a density estimator on the samples from $q$. It can still be very convenient as in the MC estimation setting we typically assume fast sampling from the approximate posterior.
+\end{itemize}
+
+\subsection{Comparisons to sampling-based methods}
+Many Bayesian statisticians prefer sampling methods -- and in fact it is the emergence of sampling methods such as importance sampling (IS), sequential Monte Carlo (SMC) \citep{doucet:smc2001} and Markov chain Monte Carlo (MCMC) that contributed to the rapid development of Bayesian statistics. They have very nice theoretical guarantees, for example, IS and SMC provide unbiased estimates of the integral and are asymptotically exact when the number of samples $K \rightarrow +\infty$. MCMC has similar asymptotic exactness guarantee but it also requires the number of transitions $T \rightarrow +\infty$. However, I view all these sampling methods as approximate inference algorithms, simply due to the fact that in practice one can never obtain an infinite number of samples, nor can one simulate the MCMC dynamics for an infinite amount of time. Furthermore, even some of these methods do construct \emph{implicit} approximate posterior distributions in practice, they still add more constraints to the inference procedures, detailed in below.
+
+\begin{itemize}
+\item (Adaptive) importance sampling (IS) and sequential Monte Carlo (SMC). \\
+Importance sampling has a long history in statistics, e.g.~see \cite{geweke:mc1989}. Roughly speaking, it proposes samples from a rather simple distribution $\pi(\z | \x)$, then ``corrects'' the sampling estimate by incorporating the importance weight
+\begin{equation}
+\mathbb{E}_{p(\z|\x)}[F(\z)] \approx \frac{1}{K} \sum_{k=1}^K w_k F(\z^k), \quad w_k = \frac{p(\z^k | \x)}{\pi(\z^k | \x)}, \quad \z^k \sim \pi(\z | \x).
+\label{eq:chap5_is_estimator}
+\end{equation}
+One can easily see the unbiasedness of the IS estimate, and under mild conditions one can also show it is consistent. Also self-normalised IS is sometimes used to obtain approximate posterior samples, which effectively constructs $q$ as 
+\begin{equation}
+q(\z | \x) = \sum_{k=1}^K \hat{w}_k \delta(\z = \z^k), \quad \hat{w}_k = \frac{w_k}{\sum_{k=1}^K w_j}, \quad \z^k \sim \pi(\z | \x).
+\end{equation}
+In this case the $q$ distribution depends on the proposal $\pi$ and the number of samples $K$, and again under mild conditions $q \rightarrow p$ when $K \rightarrow +\infty$. In this case the estimation is no longer unbiased, but practically the self-normalised IS estimate often enjoys the advantage of lower variance. Importantly, the $q$ distribution is tractable and requires fast evaluation of the $\pi$ density (up to a potentially unknown normalising constant). SMC can be viewed as importance sampling applied to time-series models (such as hidden Markov models), typically with extra techniques to improve sample efficiency.
+
+However, IS and SMC provide terrible approximations to the desired integral if the proposal $\pi$ is very different from the target distribution $p$, mainly due to the high variance of the estimator. To address this issue, researchers have considered adapting the initial distribution to reduce the variance, therefore improving sample efficiency that is key to the success of IS in practice, Indeed the (unnormalised) optimal proposal distribution for IS is proportional to $| F(\z) | p(\z | \x)$, and in some cases the resulting estimator has zero variance, indicating that it requires only one (!) sample to compute the exact integral. Recently there is a plenty of research work on how to adapt the initial distribution and combine the approach with amortised inference \citep{cornebise:smc2009, gu:nasmc2015, burda:iwae2016, paige:smc2016, le:aesmc2017, naesseth:vsmc2017, maddison:fivo2017}. But still, the tractability constraint of $\pi(\z | \x)$ largely restricts its analytic form to those have been used for VI.
+
+\item Markov Chain Monte Carlo (MCMC). \\
+An MCMC algorithm for posterior sampling is typically specified by a \emph{transition distribution} (or transition kernel) $\mathcal{T}(\z' | \z)$, with the following conditions often assumed:
+\begin{itemize}
+\item[(i)] $\mathcal{T}$ has the target distribution $p(\z|\x)$ as the \emph{unique} stationary distribution:
+$$ p(\z' | \x) = \int \mathcal{T}(\z' | \z) p(\z | \x) d \z. $$
+\item[(ii)] If defining 
+$$ \mathcal{T}_{T}(\z_T | \z_0) = \int \prod_{t=0}^{T-1} \mathcal{T}(\z_{t+1} | \z_t) d \z_{0:T-1},$$
+then for any initial distribution $q_0(\z | \x)$ the MCMC dynamics converges to the target distribution as $T \rightarrow +\infty$:
+$$\lim_{T \rightarrow +\infty} q_{T}(\z | \x) = p(\z | \x), \quad q_{T}(\z | \x) := \int \mathcal{T}_{T}(\z | \z') q_0(\z' | \x) d \z' . $$
+\end{itemize}
+Conditions that such transition kernel $\mathcal{T}$ requires are described in e.g. chapter 11 of \cite{gelman:bda1995} and \cite{brooks:mcmcbook2011}.
+
+In practice one often specifies an initial distribution $q_0(\z | \x)$ to draw starting particles, and stops simulating the transitions after $T$ steps according to his/her computational budget. Consequently, this truncated Markov chain also induces an implicit $q$ distribution
+\begin{equation}
+q(\z | \x) = \int \mathcal{T}_{T}(\z | \z') q_0(\z' | \x) d \z' .
+\end{equation}
+In many applications the computational budget only allows simulations of a small number of transitions, e.g.~when training big models with EM. Thus having a rapidly mixed chain would significantly reduce $T$, and to achieve this goal a lot of work has explored different designs of the transition kernel, to name a few see \cite{ahn:sgfs2012, duane:hmc1987, neal:mcmc2011, girolami:riemann_hmc2011, ding:sgnht2014}. However, these methods are often designed as a generic sampling algorithm, which might not be best suited for e.g.~sampling from Bayesian neural network posterior distributions.
+\end{itemize}
+
+Observing the above, I would argue that recent advances of sampling-based inference method do not achieve the best \emph{speed-accuracy trade-off} that is one of the most important topics in approximate inference. Indeed there are two potential directions to improve an MCMC procedure. First, as we will not be able to obtain the exact posterior from $T$-step MCMC simulations anyway, removing the asymptotic exactness requirement can potentially allow the best fit of the transition kernel, which makes $q(\z | \x) = q_{T}(\z | \x)$ the best approximator to the exact posterior in such a $\mathcal{Q}$ class. Second, even when the transition kernel is constrained to leave the exact posterior invariant, learning the transition kernel would enable fast convergence and bias reduction for the MCMC algorithm.
+%
+These examples are closely related to meta-learning \citep{schmidhuber:thesis1987, bengio:meta1992, naik:meta1992, thrun:meta1998} for approximate inference, which is further discussed in Section \ref{sec:chap5_wild_applications}.
+%
+Similarly for IS, there exist estimators that use some ``super-efficient'' weights to enable significantly faster convergence rates than $\mathcal{O}(K^{-\frac{1}{2}})$ the usual convergence rate for the IS estimator (\ref{eq:chap5_is_estimator}) \citep{del:smc2006, liu:bbis2017, ohagan:bayesian_quadrature1991, ghahramani:bayesianMC2003, oates:mc_integration2017}. More specifically, the recipe provided by \cite{liu:bbis2017} does not require a tractable initial distribution $\pi$ at all. Although these estimators can be biased, in practice they often provide better speed-accuracy trade-off due to their better sample efficiency.
+
+%In summary, from an approximation perspective, it is also an interesting to allow constructions of implicit initial distributions and transition kernels for sampling-based inference methods. We leave it to future investigations, and in the following we only discuss wild approximate inference methods to directly fit an approximate posterior.

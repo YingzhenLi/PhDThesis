@@ -1,0 +1,83 @@
+\section{Examples of implicit distributions}
+\label{sec:chap5_wild_dist}
+In this section we provide further examples of implicit distributions that can be fitted to the exact posterior using the algorithmic proposals introduced later.
+%
+As a reminder, we use $\vparam$ to denote the parameters for $q$, and will explicitly write $q(\z|\x) = q_{\vparam}(\z | \x)$ when necessary. 
+
+Ultimately for any uni-variate distribution, the sampling process can be described by deterministically transforming a uniform noise variable with the inverse \emph{cumulative density function} (CDF) or quantile function:
+\begin{equation}
+z \sim p(z) \quad \Leftrightarrow \quad u \sim \text{Uniform}(0, 1), \quad z = \text{CDF}_{p}^{-1}(u).
+\end{equation}
+For multivariate distributions, a similar process would return a set of possible configurations $\text{CDF}_{p}^{-1}(u) = \{ \inf ~ \z : \text{CDF}_{p}(\z) \geq u \}$, and one could then uniformly sample from it. However, computing the (inverse) CDF can be even harder than evaluating the density $p(\z)$ at a given configuration. Nevertheless, the observation above inspires us to define the approximate distribution $q$ by transforming a random noise variable $\bm{\epsilon}$ through a deterministic mapping $\f$:
+\begin{equation}
+\z \sim q(\z | \x) \quad \Leftrightarrow \quad \bm{\epsilon} \sim \pi(\bm{\epsilon}), \quad \z = \f(\bm{\epsilon}, \x).
+\end{equation}
+This definition exhibits similar flavour as the reparameterisation trick \citep{kingma:vae2014}, and in the following we will also say $q$ is \emph{reparameterisable} if the sampling process of $q$ follows the above procedure.
+
+An important note here is that $\f$ might not be invertible, which differs from the invertible transform techniques discussed in \citep{rezende:flow2015,kingma:iaf2016}. Thus the $q$ density cannot be evaluated by just calculating the Jacobian matrix as in the other case. It also implies that one cannot directly apply VI to find the best mapping $\f$ simply because the entropy term $\mathbb{H}[q]$ is again intractable.%\footnote{For non-invertible $\f$, directly applying the Jacobian terms to the entropy equations (like what is done for invertible transforms) would over-estimate the entropy, thus losing the lower-bounding guarantee of VI.} 
+%
+Thus additional mathematical tools are required to handle this type of approximations, which will be detailed in later sections. 
+
+\subsection{Neural network transform with noise inputs}
+The simplest way to define the transformation $\f$ is to construct a deterministic deep neural network $\text{NN}_{\vparam}$ which takes both the observation $\x$ and the noise variable $\bm{\epsilon}$ as input:
+\begin{equation}
+\z \sim q(\z | \x) \quad \Leftrightarrow \quad \bm{\epsilon} \sim \pi(\bm{\epsilon}), \quad \z = \text{NN}_{\vparam} (\bm{\epsilon}, \x).
+\end{equation}
+The density network \citep{mackay:density1999} further generalises this idea using ``Bayesian'' neural networks, by putting a prior distribution on the neural network parameters. In this case the sampling procedure changes to
+\begin{equation}
+\z \sim q(\z | \x) \quad \Leftrightarrow \quad \bm{\epsilon} \sim \pi(\bm{\epsilon}), \bm{W} \sim \pi(\bm{W}), \quad \z = \text{NN}_{\bm{W}} (\bm{\epsilon}, \x).
+\end{equation}
+%
+Since neural networks are well known to be universal functional approximators \citep{hornik:universal_approx1989}, the hope is that the constructed neural network is expressive enough to learn how to return a point in the set of $ \text{CDF}_{p}^{-1} \circ \text{CDF}_{\pi}$. This type of distributions is also called \emph{variational programs} in \citep{ranganath:ovi2016}, or \emph{implicit generative models} in the generative model context \citep{mohamed:gan2016}. 
+
+\subsection{Stochastic deep neural networks and recurrent neural networks}
+There has been a number of recent work that investigated latent variable models as $q$ distributions, e.g.~see \cite{salimans:mcmcvi2015, ranganath:hvm2016, tran:vgp2016, maaloe:agdm2016}. In short, the $q$ distribution is constructed by a series of conditional probabilities
+\begin{equation}
+q(\z | \x) = \int q(\z, \z_0, \z_1, ..., \z_{T-1} | \x) d\z_{0:T-1} = \int q(\z | \z_{T-1}, \x) \prod_{t=1}^{T-1} q(\z_{t} | \z_{t-1}, \x) d\z_{0:T-1}.
+\end{equation}
+In the remainder of this section we will also write $\z_T = \z$. The most general form allows $q(\z_{t} | \z_{t-1}, \x)$ to have a different form at each time step $t$. Previous uses of this type of approximate distribution focused on the simple case where $q(\z_{t} | \z_{t-1}, \x)$ has tractable density (so that for small $T$ the $q$ distribution is explicit). We review some of the algorithms for fitting them in Appendix \ref{chap:optional}.
+
+What if $q(\z_t | \z_{t-1}, \x)$ is implicit? Following the discussions of neural network approximations to the inverse CDF function, generally one can implicitly define the conditional distribution using a neural network taking $\z_{t-1}$ and an extra ``nuisance'' noise variable $\bm{\epsilon}_t$ as the input:
+\begin{equation}
+\z_{t} \sim q(\z_t | \z_{t-1}, \x) \quad \Leftrightarrow \quad \z_t = \f_{t}(\z_{t-1}, \bm{\epsilon}_t, \x). \quad \bm{\epsilon}_t \sim \pi(\bm{\epsilon}_t).
+\end{equation}
+The joint distribution $q(\z_{0:T} | \x)$ is then parameterised by a stochastic deep neural network. Again the marginal distribution $q(\z_T | \x)$ does not have a tractable density so that traditional approximate inference methods do no apply.
+
+An interesting special case of the stochastic neural network approach considers tying the parameters of $q(\z_t|\z_{t-1}, \x)$ at every time step, which essentially makes the network a stochastic recurrent neural network (RNN). In fact this special case can be viewed as a truncated Markov chain, making the stochastic RNN approach closely related to MCMC. Although we will never be able to achieve the exactness guarantee for an MCMC algorithm, we can still use the intuition there to design an approximate $q$ distribution that works well for our data. For example, \cite{ma:mcmc_recipe2015} claimed that a stochastic gradient MCMC (SG-MCMC) algorithm within the It\^{o} diffusion framework can be framed into the following form (with discretisation)
+\begin{equation}
+\z_{t} = \z_{t+1} + \zeta_t [ (\bm{D}(\z_t) + \bm{Q}(\z_t) ) \nabla_{\z_t} \log p(\z = \z_t | \x) + \Gamma(\z_t) ] + \sqrt{2 \zeta_t \bm{D}(\z_t)} \bm{\epsilon}_t, \quad \bm{\epsilon}_t \sim \mathcal{N}(\bm{0}, \mathbf{I}),
+\label{eq:chap5_mcmc_recipe}
+\end{equation}
+where $\bm{D}(\z_t)$ and $\bm{Q}(\z_t)$ control the drift and diffusion of the dynamics, and $\Gamma(\z_t)$ is a correction term to ensure asymptotic exactness (with infinitesimal discretisation step-size).
+%
+But recall that asymptotic exactness is not required if one only cares about the approximation quality of $q_T(\z|\x)$.
+%
+This inspires us to derive the following stochastic RNN using NN-defined drift and diffusion: with $\nabla_t$ short-hands for $ \nabla_{\z_t} \log p(\z = \z_t | \x)$,
+\begin{equation}
+\z_{t} = \z_{t+1} + \zeta_t \f_1 (\z_t, \x, \nabla_t) +  \zeta_t \f_2 (\z_t, \x, \nabla_t) \bm{\epsilon}_t, \quad \bm{\epsilon}_t \sim \mathcal{N}(\bm{0}, \mathbf{I}),
+\end{equation}
+with each of the $\f_i$ functions parameterised by a neural network, or even an RNN with memory modules \citep{hochreiter:lstm1997, graves:ntm2014}. A promising direction would consider learning this stochastic RNN based approximate posterior distribution so that it generalises well to unseen target distributions. This meta-learning task can be addressed in a similar fashion as in \citet{andrychowicz:gradient2016, li:optimize2016} -- see discussions in later sections and an initial experiment in Chapter \ref{chap:grad_approx}. 
+
+\vspace{1em}
+\begin{tcolorbox}
+\textbf{Remark} (stochastic gradient descent (SGD) as an approximate inference method)\textbf{.}
+SG-MCMC has a close relationship to SGD in that it can be viewed as adding a properly scaled noise term to a (pre-conditioned) SGD procedure. Therefore one can also draw inspiration from SGD for approximate posterior design. Indeed recently \cite{maclaurin:sgd2016} has shown that the end points obtained by early stopping SGD (i.e.~using finite $T$) results in a nonparametric variational posterior approximation. Later \cite{mandt:sgd2016, mandt:sgd2017} also showed that under some constraints, the stationary distribution of SGD also forms an approximation to the posterior. The authors further proposed tuning the parameters (learning rate, pre-conditioning matrix, etc.) using variational inference. Similar results have also been discussed in \citet{smith:sgd2018}.
+\end{tcolorbox}
+%
+
+\subsection{Learning to pass messages}
+
+An important research direction of graphical models is the fast computation of the marginal distributions of the random variables associated with the nodes in a graph. In formula, given a graphical model with graph $G = (V, E)$, marginal inference means the computation of $p(x_i) = \int p(x_i, \x_{\backslash i}) d \x_{\backslash i}$ for all $i \in V$.
+%
+Message passing methods, such as belief propagation and EP as reviewed in the first theme, are popular approximate inference methods for such a purpose. Historically these graphs are constructed to have simple functions attached to each factor, making the computation of local messages tractable and fast. But the message computation is no longer analytic if non-linear mappings are adopted to describe the conditional distributions or potentials. Though not a primary focus of this chapter, below we discuss two recent approaches handling this challenging case with non-conventional methods, of which both do not require tractable densities of the messages or beliefs.
+
+\begin{itemize}
+\item Adversarial training for message approximation. \\
+In directed graphical model setting, we often specify the model distribution as $p(\x) = \prod_{i} p(x_i | \text{pa}(x_i))$, in which $\text{pa}(x_i)$ represent the variables attached to the parent nodes of $x_i$ in the graph. Given observed variables $\x_{o}$, we utilise the graphical structure to design $q(\x) = q(\x_o) \prod_{i \not\in o} q(x_i | \tilde{\text{mb}}(x_i))$ where $\tilde{\text{mb}}(x_i)$ denotes the variables in the Markov blanket of $x_i$ needed for d-separation given $\x_o$, and the goal is to make $q$ as close as possible to $p$. Assuming an implicit $q$ density here, a naive idea defines a \emph{global} Jensen-Shannon divergence \citep{lin:jensen_shannon1991} then using the generative adversarial network (GAN) \citep{goodfellow:gan2014} idea to (approximately) minimise it. However computing this global divergence needs an ``interpolated'' distribution $m(\x) = \frac{1}{2} p(\x) + \frac{1}{2} q(\x)$, which effectively destroys the graphical structure and thus requires the discriminator to take the entire set of variables $\x$ as the input. This can be very computationally demanding for very big graphs. Instead, \cite{karaletsos:adversarial_mp2016} sketched an algorithm using \emph{local} Jenson-Shanon divergences between $q(x_i, \tilde{\text{mb}}(x_i))$ and $p(x_i, \text{pa}(x_i))$,\footnote{In general $q(x_i, \tilde{\text{mb}}(x_i))$ can be unnormalised (usually happens in message passing), and one can define divergences between unnormalised densities accordingly, see \citet{minka:divergence2005}. } where a GAN approximation for this divergence requires only inputs for a subset of variables $\{ x_i, \text{pa}(x_i), \tilde{\text{mb}}(x_i) \}$ thus can be nested into a message passing procedure. This idea can also be extended to EP/SEP (see Chapters \ref{chap:background} and \ref{chap:factor_tying}), in which we replace the M-projection step by minimising $\mathrm{JS}[\tilde{p}_n(\mparam) || q(\mparam)]$ that is further approximated by a GAN procedure.
+
+\item Discriminative learning of the messages. \\
+Learning the parameters of an undirected graphical model often requires (loopy) belief propagation (LBP) repeatedly to infer the unobserved variables, which can be computationally challenging. However, notice that in many supervised learning tasks the latent variables are mostly served as a feature representation for later usage, in which for a test datum LBP is executed to obtain this embedding anyway. Therefore the prediction pipeline only requires the ``approximate model'' returned by message passing, and never touches the true distribution of the graphical model. Observing this, \cite{zheng:crf_rnn2015} and \cite{dai:embed_infer2016} proposed directly training the ``approximate model'' in an end-to-end fashion using supervision data. In particular, \cite{song:kbp2011} took the intuition from kernel mean embeddings \citep{smola:kernel_embedding2007} that a distribution can be summarised with a point in a reproducing kernel Hilbert space (RKHS), and proposed a belief propagation algorithm to estimate the RKHS embeddings of marginal distributions. The graph neural network \citep{gori:graph2005, scarselli:graph2009, li:gated2015, dai:embed_infer2016} further extended this idea and parameterised the outgoing belief features as neural networks taking the incoming belief features as inputs. \\
+%
+We note that this idea is \emph{different} from directly using $q$ as the underlying model. Unless the graph exhibits a tree structure (where $q$ converges to $p$), the local beliefs obtained from LBP might not be \emph{consistent}, i.e.~these pseudo marginals \emph{do not} always come from the same joint distribution. Rather, the modelling pipeline still uses an intractable but valid graphical model, where the discussed algorithms focus on improving the predictive inference performance directly.
+
+\end{itemize}

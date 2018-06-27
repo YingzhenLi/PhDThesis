@@ -1,0 +1,27 @@
+\chapter{Gradient Estimators for Implicit Models}
+\label{chap:grad_approx}
+
+% **************************** Define Graphics Path **************************
+\ifpdf
+    \graphicspath{{Chapter7/figs/Raster/}{Chapter7/figs/PDF/}{Chapter7/figs/}{Chapter7/}}
+\else
+    \graphicspath{{Chapter7/figs/Vector/}{Chapter7/figs/}{Chapter7/}}
+\fi
+
+\input{Chapter7/intro}
+
+\input{Chapter7/background}
+\input{Chapter7/approximations2}
+\input{Chapter7/applications2}
+\input{Chapter7/conclusions}
+
+
+\vspace{3em}
+{\Large
+\noindent \hrulefill \hspace{0.2cm} \raisebox{-4pt}[10pt][10pt]{\decofourleft ~  \decosix ~ \decofourright} \hspace{0.1cm} \hrulefill
+\vspace{2em}
+}
+
+Here comes the end of the second theme of the thesis, where we have discussed principles of approximate inference algorithm design (Chapter \ref{chap:wild}) and presented one concrete example (Chapter \ref{chap:grad_approx}) on learning wild approximations. Readers might have noticed that wild approximate inference is still a very new research direction: many related papers in citation are freshly baked within a year of this thesis submission, and the proposals in development are inspired by recent success in machine learning and deep learning. Thus both theoretical analyses and extensive comparisons to traditional approaches are much in need, which will then help identify the ideal application scenarios and possibly potential pitfalls of the method.
+
+The presented two themes have substantial differences. In the next chapter, which concludes the thesis, I will summarise the contributions of the thesis to the approximate inference community, and discuss the connections and comparisons between the two themes. Expositions of important research questions will also be provided, and hopefully this will serve as a principled guide for future development of approximate inference algorithms.

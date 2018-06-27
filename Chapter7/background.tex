@@ -1,0 +1,38 @@
+\section{Learning implicit probabilistic models}
+
+Given a dataset $\mathcal{D}$ containing i.i.d.~samples we would like to learn a probabilistic model $p(\x)$ for the underlying data distribution $p_{\data}(\x)$. In the case of implicit models, $p(\x)$ is defined by a generative process. For example, to generate images, one might define a generative model $p(\x)$ that consists of sampling randomly a latent variable $\z \sim p_0(\z)$ and then defining $\x = \f_{\mparam}(\z)$. Here $\f$ is a function parametrised by $\mparam$, usually a deep neural network or a simulator. We assume $\f$ to be differentiable w.r.t.~$\mparam$. An extension to this scenario is presented by \emph{conditional} implicit models, where the addition of a supervision signal $\y$, such as an image label, allows us to define a conditional distribution $p(\x| \y)$ implicitly by the transformation $\x = \f_{\mparam}(\z, \y)$. A related methodology, \emph{wild approximate inference} (Chapter \ref{chap:wild}) assumes a tractable joint density $p(\x, \z)$, but uses implicit proposal distributions to approximate an intractable exact posterior $p(\z|\x)$. Here the approximate posterior $q(\z|\x)$ can likewise be represented by a deep neural network, but also by a truncated Markov chain, such as that given by Langevin dynamics with learnable step-size. 
+
+%Given a dataset $\mathcal{D}$ containing i.i.d.~samples of the data distribution $p_{\data}(\x)$, we would like to learn it with a probabilistic model $p(\x)$. Implicit models usually define this distribution by describing a generative process. Taking image generation as an example, the generative model $p(\x)$ is defined by first sampling some random configuration of a latent variable $\z \sim p_0(\z)$, then transforming it into $\x = \f_{\mparam}(\z)$ with a function $\f$ parametrised by $\mparam$. In the rest of the paper we assume $\f$ is differentiable w.r.t.~$\mparam$. Such function can be represented by a deep neural network or a simulator. \emph{Conditional} implicit models have also been studied in the literature, for example, one can add in supervision signals $\y$, e.g.~labels of the image, and define $p(\x| \y)$ implicitly by the transformation $\x = \f_{\mparam}(\z, \y), \z \sim p_0(\z)$. On the other hand, \emph{wild variational inference} \citep{liu:two_wild2016, li:wild2016} assumes a tractable joint density $p(\x, \z)$ but proposes using implicit distributions to approximate the intractable exact posterior $p(\z|\x)$. Here the approximate posterior $q(\z|\x)$ can also be represented by a deep neural network, or a truncated Markov chain such as Langevin dynamics with learnable step-size. 
+
+Whilst providing extreme flexibility and expressive power, the intractability of density evaluation also brings serious optimisation issues for implicit models. This is because many learning algorithms, e.g.~maximum likelihood estimation (MLE), rely on minimising a distance/divergence/discrepancy measure $\mathrm{D}[p || p_{\data}]$, which often requires evaluating the model density \citep[c.f.][]{ranganath:ovi2016, liu:two_wild2016}. Thus good approximations to the optimisation procedure are the key to learning implicit models that can describe complex data structure. In the context of GANs, the Jensen-Shannon divergence is approximated by a variational lower-bound represented by a discriminator \citep{barber:vim2003, goodfellow:gan2014}. 
+%
+Related work for wild variational inference \citep{li:wild2016, mescheder:avb2017, huszar:implicit2017, tran:implicit2017} uses a GAN-based technique to construct a density ratio estimator for $q / p_0$ \citep{sugiyama:ratio2009, sugiyama:ratio2012, uehara:gan2016, mohamed:gan2016} and then approximates the KL-divergence term in the variational lower-bound:
+\begin{equation}
+\mathcal{L}_{\text{VI}}(q) = \mathbb{E}_{q} \left[ \log p(\x | \z) \right] - \mathrm{KL}[q_{\vparam}(\z|\x) || p_0(\z)].
+\end{equation} 
+In addition, \cite{li:wild2016} and \cite{mescheder:avb2017} exploit the additive structure of the KL-divergence and suggest discriminating between $q$ and an auxiliary distribution that is close to $q$, making the density ratio estimation more accurate. Nevertheless all these algorithms involve a minimax optimisation, and the current practice of gradient-based optimisation is notoriously unstable. 
+
+The stabilisation of GAN training is itself a recent trend of related research \citep[e.g.~see][]{salimans:training2016, arjovsky:wgan2017}. However, as the gradient-based optimisation only interacts with gradients, there is no need to use a discriminator if an accurate approximation to the intractable gradients could be obtained. As an example, consider a variational inference task with the approximate posterior defined as $\z \sim q_{\vparam}(\z | \x) \Leftrightarrow \bm{\epsilon} \sim \pi(\bm{\epsilon}), \z = \f_{\vparam}(\bm{\epsilon}, \x)$. Notice that the variational lower-bound can be rewritten as
+\begin{equation}
+\mathcal{L}_{\text{VI}}(q) = \mathbb{E}_{q} \left[ \log p(\x, \z) \right]  + \mathbb{H}[q_{\vparam}(\z | \x)],
+\label{eq:vi_objective_entropy}
+\end{equation}
+the gradient of the variational parameters $\vparam$ can be computed by a sum of the path gradient of the first term (i.e.~$\mathbb{E}_{\pi} \left[ \nabla_{\f} \log p(\x, \f(\noise, \x))^{\text{T}} \nabla_{\vparam} \f(\noise, \x) \right] $) and the gradient of the entropy term $\nabla_{\vparam} \mathbb{H}[q(\z | \x)]$. Expanding the latter, we have 
+%\begin{equation}
+%-\nabla_{\vparam} \mathbb{H}[q(\z | \x)] = \mathbb{E}_{\pi} \left[ \nabla_{\f} \log q(\f(\noise, \x) | \x)^{\text{T}} \nabla_{\vparam} \f(\noise, \x)] \right] + \mathbb{E}_{q} \left[ \nabla_{\vparam} \log q_{\vparam}(\z | \x) \right],
+%\label{eq:entropy_gradient}
+%\end{equation}
+\begin{equation}
+\begin{aligned}
+\nabla_{\vparam} \mathbb{H}[q_{\vparam}(\z | \x)] 
+&= - \nabla_{\vparam} \mathbb{E}_{\pi(\bm{\epsilon})}[\log q_{\vparam}(\f_{\vparam}(\bm{\epsilon}, \x))] \\
+&= - \mathbb{E}_{\pi(\bm{\epsilon})}[ \nabla_{\vparam} \log q_{\vparam}(\f_{\vparam}(\bm{\epsilon}, \x))] \\
+&= - \mathbb{E}_{\pi(\bm{\epsilon})}[ \nabla_{\vparam} \log q_{\vparam}(\z | \x) |_{\z = \f_{\vparam}(\bm{\epsilon}, \x)} +  \nabla_{\vparam} \f_{\vparam}(\bm{\epsilon}, \x)  \nabla_{\f} \log q_{\vparam}(\f_{\vparam}(\bm{\epsilon}, \x) | \x) ] \\
+&= - \mathbb{E}_{q_{\vparam}(\z | \x)} [ \nabla_{\vparam} \log q_{\vparam}(\z | \x)] - \mathbb{E}_{\pi(\bm{\epsilon})} [ \nabla_{\vparam} \f_{\vparam}(\bm{\epsilon}, \x) \nabla_{\f} \log q_{\vparam}(\f_{\vparam}(\bm{\epsilon}, \x) | \x)  ],
+\end{aligned}
+\label{eq:entropy_gradient}
+\end{equation}
+in which the first term in the last line is zero \citep{roeder:sticking2017}. As we typically assume the tractability of $\nabla_{\vparam} \f$, an accurate approximation to $\nabla_{\z} \log q(\z | \x)$ would remove the requirement of discriminators, speed-up the learning and obtain potentially a better model.
+%
+Many gradient approximation techniques exist \citep{stone:spline1985, fan:local_poly1996, zhou:spline2000, debrabanter:lpr2013}, and in particular, in the next section we will review kernel-based methods such as kernel density estimation \citep{singh:kernel_gradient1977} and score matching \citep{hyvarinen:score2005} in more detail, and motivate the main contribution of this chapter.
+

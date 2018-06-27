@@ -1,0 +1,32 @@
+\section{Application: meta-learning for approximate inference}
+\label{sec:chap5_wild_applications}
+
+Many inference algorithms discussed in this thesis, e.g.~variational inference (with KL or R{\'e}nyi divergences) and sampling (importance sampling, SMC, MCMC, etc.), are designed as generic algorithms that can be directly applied to any integration problem. Can we automate the design of inference algorithms that are tailored to specific types of machine learning tasks (e.g.~Bayesian neural network regression)? In this section we briefly discuss a meta-learning \citep{schmidhuber:thesis1987, bengio:meta1992, naik:meta1992, thrun:meta1998} approach towards this goal.
+%
+The research scope of meta-learning is very broad, but in general the idea is to train a \emph{learner} on one or multiple tasks, in order to acquire common knowledge on \emph{how} to learn and generalise the learner to future tasks. Therefore meta-learning enables an inference algorithm to exploit commonly shared dependencies in a class of densities (say the posterior distribution of Bayesian neural network weights), and it is expected to produce a better approximation to the exact posterior.
+
+In approximate inference context we define a learner as an algorithm $\mathcal{A}: \mathcal{P} \rightarrow \mathcal{Q}$ that maps the target distribution $p \in \mathcal{P}$ to an approximate distribution $q \in \mathcal{Q}$. For example, the classic variational inference algorithm can be rewritten as
+\begin{equation}
+\mathcal{A}_{\text{VI}}(p(\z | \x)) = \argmax_{q \in \mathcal{Q}} \mathbb{E}_q \left[ \log \frac{p(\x, \z)}{q(\z)} \right].
+\end{equation}
+Also the $T$-step simulation of an MCMC procedure with kernel $\mathcal{T}$ and initial distribution $q_0(\z | \x)$ is 
+\begin{equation}
+\mathcal{A}_{\mathcal{T}, T, q_0}(p(\z | \x)) = \int \mathcal{T}_T(\z | \z') q_0(\z' | \x) d\z' .
+\end{equation}
+Often these algorithms are approximated executed, e.g.~for variational inference the maximisation operator is approximated by $T$-step gradient ascent.
+
+We consider meta-learning for approximate inference, which optimises $\mathcal{A}$ on a set of training densities $\{ p_n(\z) \}_{n=1}^N$, and generalises the learned algorithm $\mathcal{A}^*$ to unseen distributions. The training densities might come from a multi-task learning set-up, i.e.~$p_n(\z) = p(\z | \data_n)$ where $\data_n$ is the dataset for task $n$. Then one can define $\mathcal{A}(p(\z | \data)) = q_{\vparam}(\z | \data)$ with e.g.~a neural network, and then optimise the associated variational parameters $\vparam$ on the datasets $\data_1, ..., \data_N$. Further approximation techniques such as coresets \citep{huggins:coresets2016} and inducing points \citep{snelson:sparse_gp2006} can also be utilised If the dataset $\data_n$ is very big. In this case meta-learning for approximate inference algorithms can be viewed as amortised inference on \emph{task} level, therefore many of the recently developed techniques can be deployed. But it might require the use of techniques discussed in previous sections, as one might prefer the learned algorithm $\mathcal{A}$ to produce implicit posterior approximations to the target densities.
+
+In general the $p_n$ densities might be derived from different probabilistic models with different observations and different latent variables, and the above neural network parameterisation is very likely to be sub-optimal. Instead of directly parameterising the $q$ distributions, we propose learning an approximate inference algorithm $\mathcal{A}_{\vparam}$ based on optimisation and/or sampling. 
+%
+%The first proposal takes inspirations from $f$-divergences \citep{csiszar:divergence1963} and the recently proposed perturbative variational objective \citep{bamler:perturbative_bbvi2017} that provides a lower-bound to the log marginal $\log p_n(\data_n)$:
+%\begin{equation}
+%\mathcal{A}_{f}(p_n(\z | \data_n)) = \argmax_{q \in Q} \ \mathbb{E}_q \left[ \log f \left( \frac{p_n(\data_n, \z)}{q(\z)} \right) \right]
+%\end{equation}
+%subject to that $f$ is a concave function on $\mathbb{R}^{+}$. A meta-learning approach would parameterise $f(\cdot) = f_{\vparam}(\cdot)$ and learn the parameters $\vparam$ by optimising some meta-objective $\mathcal{L}_{\text{meta}}$ on $\mathcal{A}_{f_{\vparam}}(p_n(\z | \data_n))$ for all $n = 1, ..., N$. Thus the learned variational objective will encourage the $q$ distribution to have desirable properties, e.g.~better interpolation between mode-seeking and mass-covering behaviours.
+%
+Consider learning a Markov process for posterior inference as an example. By parameterising $\mathcal{T}_n(\z'_n | \z_n) = \mathcal{T}_{\vparam}(\z'_n | \z_n; p_n)$ for all $n = 1, ..., N$, the sampler is learned by optimising some meta-objective $\mathcal{L}_{\text{meta}}$ on $\mathcal{A}_{\mathcal{T}_{\vparam}, T, q_0}(p_n(\z_n))$ for all $n = 1, ..., N$. 
+%
+Thus the trained transition kernel $\mathcal{T}_{\vparam}$ will have its stationary distribution close to the target $p_n$, and/or it will have fast convergence and low bias properties if $\mathcal{T}_{\vparam}(\z'_n | \z_n; p_n)$ is implicitly defined by a diffusion process with $p_n$ as the stationary distribution \citep{ma:mcmc_recipe2015}. The design of the meta-objective $\mathcal{L}_{\text{meta}}$ should avoid evaluating the density of the approximate posterior as an MCMC algorithm typically returns an implicit distribution. An initial experiment for learning samplers is presented in Chapter \ref{chap:grad_approx}.
+
+

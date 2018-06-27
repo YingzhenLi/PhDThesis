@@ -1,0 +1,210 @@
+\section{Gradient approximation with the Stein gradient estimator}
+\label{sec:gradient_approximation}
+
+We propose the \emph{Stein gradient estimator} as a novel generalisation of the score matching gradient estimator. Before presenting it we first set-up the notation. Column vectors and matrices are boldfaced. The random variable under consideration is $\x \in \mathcal{X}$ with $\mathcal{X} = \mathbb{R}^{d \times 1}$ if not specifically mentioned. To avoid misleading notation we use the distribution $q(\x)$ to derive the gradient approximations for general cases. As Monte Carlo methods are heavily used for implicit models, in the rest of the paper we mainly consider approximating the gradient $\g(\x^k) :=\nabla_{\x^k} \log q(\x^k)$ for $\x^k \sim q(\x), k = 1, ..., K$. We use $x^i_j$ to denote the $j$th element of the $i$th sample $\x^i$. We also denote the matrix form of the collected gradients as
+$\Grad := \left( \nabla_{\x^1} \log q(\x^1), \cdots, \nabla_{\x^K} \log q(\x^K) \right)^{\text{T}} \in \mathbb{R}^{K \times d}$, and its approximation $\hat{\Grad} := \left( \hat{g}(\x^1), \cdots, \hat{g}(\x^K) \right)^{\text{T}}$ with $\hat{g}(\x^k) = \nabla_{\x^k} \log \hat{q}(\x^k)$ for some $\hat{q}(\x)$.
+
+\subsection{Stein gradient estimator: inverting Stein's identity}
+We start from introducing \emph{Stein's identity} that was first developed for Gaussian random variables \citep{stein:stein_method1972, stein:stein_method_multi1981} then extended to general cases \citep{gorham:stein_method2015, liu:ksd2016}.
+%
+Let $\h: \mathbb{R}^{d \times 1} \rightarrow \mathbb{R}^{d' \times 1}$ be a differentiable multivariate test function which maps $\x$ to a column vector $\h(\x) = [h_1(\x), h_2(\x), ..., h_{d'}(\x)]^{\text{T}}$. We further assume the \emph{boundary condition} for $\h$: 
+\begin{equation}
+q(\x)\h(\x) |_{\partial \mathcal{X}} = \bm{0}, \text{ or } \lim_{\x \rightarrow \bm{\infty}} q(\x) \h(\x) = 0 \text{ if } \mathcal{X} = \mathbb{R}^d.
+\label{eq:boundary_condition}
+\end{equation}
+This condition holds for almost any test function if $q$ has sufficiently fast-decaying tails (e.g.~Gaussian tails).
+%
+Now we introduce Stein's identity \citep{stein:stein_method_multi1981, gorham:stein_method2015, liu:ksd2016}
+\begin{equation}
+\mathbb{E}_{q}[\h(\x) \nabla_{\x} \log q(\x)^{\text{T}} + \nabla_{\x} \h(\x) ] = \bm{0}, 
+\label{eq:stein_identity_multi}
+\end{equation}
+in which the gradient matrix term
+$
+\nabla_{\x} \h(\x) = \left( \nabla_{\x} h_1(\x), \cdots, \nabla_{\x} h_{d'}(\x) \right)^{\text{T}} \in \mathbb{R}^{d' \times d}.
+$
+This identity can be proved using \emph{integration by parts}: for the $i$th row of the matrix $\h(\x) \nabla_{\x} \log q(\x)^{\text{T}}$, we have
+\begin{equation}
+\begin{aligned}
+\mathbb{E}_{q}[ h_i(\x) \nabla_{\x} \log q(\x)^{\text{T}}]
+&= \int h_i(\x) \nabla_{\x} q(\x)^{\text{T}} d \x \\
+&= q(\x)h_i(\x) |_{\partial \mathcal{X}} - \int q(\x)  \nabla_{\x} h_i(\x)^{\text{T}} d \x \\
+&= - \mathbb{E}_{q} [\nabla_{\x} h_i(\x)^{\text{T}}].
+\end{aligned}
+\label{eq:integration_by_parts}
+\end{equation}
+Observing that the gradient term $\nabla_{\x} \log q(\x)$ of interest appears in Stein's identity (\ref{eq:stein_identity_multi}), we propose the \emph{Stein gradient estimator} by inverting Stein's identity. As the expectation in (\ref{eq:stein_identity_multi}) is intractable, we further approximate the above with Monte Carlo (MC):
+\begin{equation}
+\frac{1}{K} \sum_{k=1}^K -\h(\x^k) \nabla_{\x^k} \log q(\x^k)^{\text{T}} + \text{err} = \frac{1}{K} \sum_{k=1}^K \nabla_{\x^k} \h(\x^k), \quad \x^k \sim q(\x^k),
+\label{eq:stein_multi_mc}
+\end{equation}
+with $\text{err} \in \mathbb{R}^{d' \times d}$ the random error due to MC approximation, which has mean $\bm{0}$ and vanishes as $K \rightarrow +\infty$. Now by temporarily denoting
+$$
+\Hmatrix = \left( \h(\x^1), \cdots , \h(\x^K) \right) \in \mathbb{R}^{d' \times K}, \quad
+\hgrad = \frac{1}{K} \sum_{k=1}^K \nabla_{\x^k} \h(\x^k) \in \mathbb{R}^{d' \times d},
+$$
+equation (\ref{eq:stein_multi_mc}) can be rewritten as
+$$-\frac{1}{K} \Hmatrix \Grad + \text{err} = \hgrad.$$
+Thus we consider a ridge regression method (i.e. adding an $\ell_2$ regulariser) to estimate $\Grad$:
+\begin{equation}
+\hat{\Grad}_V^{\text{Stein}} := \argmin_{\hat{\Grad} \in \mathbb{R}^{K \times d} } || \hgrad + \frac{1}{K} \Hmatrix \hat{\Grad} ||_{F}^2 + \frac{\eta}{K^2} || \hat{\Grad} ||_{F}^2,
+\label{eq:stein_objective}
+\end{equation}
+with $|| \cdot ||_{F}$ the Frobenius norm of a matrix and $\eta \geq 0$. Simple calculation shows that
+\begin{equation}
+\hat{\Grad}_V^{\text{Stein}} = -( \K + \eta \bm{I} )^{-1} \langle \nabla, \K \rangle,
+\label{eq:stein_estimator}
+\end{equation}
+where 
+$$\K := \Hmatrix^{\text{T}} \Hmatrix, \quad \K_{ij} = \mathcal{K}(\x^i, \x^j) := \h(\x^i)^{\text{T}} \h(\x^j),$$
+$$\langle \nabla, \K \rangle := K \Hmatrix^{\text{T}} \hgrad, \quad \langle \nabla, \K \rangle_{ij} = \sum_{k=1}^{K} \nabla_{x^k_j} \mathcal{K}(\x^i, \x^k).$$
+%
+One can show that the RBF kernel satisfies Stein's identity \citep{liu:ksd2016}. In this case $\h(\x) = \mathcal{K}(\x, \cdot), d' = +\infty$ and by the reproducing kernel property  \citep{berlinet:rkhs2011},
+$\h(\x)^{\text{T}} \h(\x') = \langle \mathcal{K}(\x, \cdot), \mathcal{K}(\x', \cdot) \rangle_{\mathcal{H}} = \mathcal{K}(\x, \x') .$
+
+\subsection{Stein gradient estimator minimises the kernelised Stein discrepancy}
+In this section we derive the Stein gradient estimator again, but from a divergence/discrepancy minimisation perspective. 
+%
+Stein's method also provides a tool for checking if two distributions $q(\x)$ and $\hat{q}(\x)$ are identical. If the test function set $\mathcal{H}$ (containing one-dimensional test functions $h \in \mathcal{H}$) is sufficiently rich, then one can define a Stein discrepancy measure (equipped with norm $|| \cdot ||$) by
+\begin{equation}
+\mathcal{S}(q, \hat{q}) := \sup_{\h \in \mathcal{H}} || \mathbb{E}_{q} \left[ \nabla_{\x} \log \hat{q}(\x) h(\x) + \nabla_{\x} h(\x) \right] ||,
+\label{eq:stein_discrepancy}
+\end{equation}
+see \cite{gorham:stein_method2015} for an example derivation. The definition can be generalised to multi-dimension test functions $\h(\x)$, and in particular, when $\mathcal{H}$ is defined as a unit ball in an RKHS induced by a kernel $\mathcal{K}(\x, \cdot)$ and $|| \cdot ||$ is the $\ell_2$ norm, \cite{liu:ksd2016} and \cite{chwialkowski:ksd2016} showed that the supremum in (\ref{eq:stein_discrepancy}) can be analytically obtained as (recall $\g(\x) = \nabla_{\x} \log q(\x), \hat{\g}(\x) = \nabla_{\x} \log \hat{q}(\x)$): 
+\begin{equation}
+\mathcal{S}^2(q, \hat{q}) = \mathbb{E}_{\x, \x' \sim q} \left[ (\hat{\g}(\x) - \g(\x) )^{\text{T}} \mathcal{K}(\x, \x') (\hat{\g}(\x') - \g(\x') ) \right],
+\label{eq:ksd}
+\end{equation}
+which is also named the \emph{kernelised Stein discrepancy} (KSD). \cite{chwialkowski:ksd2016} showed that for $C_0$-universal kernels satisfying the boundary condition, KSD is indeed a discrepancy measure: $\mathcal{S}^2(q, \hat{q}) = 0 \Leftrightarrow q = \hat{q}$.  \cite{gorham:ksd2017} further characterised the power of KSD on detecting non-convergence cases. Furthermore, if the kernel is twice differentiable, then using the same technique as to derive (\ref{eq:score_matching_objective}) one can compute KSD by  (with $\mathcal{K}_{\x \x'}$ shorthand for $\mathcal{K}(\x, \x')$):
+\begin{equation}
+\mathcal{S}^2(q, \hat{q}) = \mathbb{E}_{\x, \x' \sim q} \left[ \hat{\g}(\x)^{\text{T}} \mathcal{K}_{\x \x'} \hat{\g}(\x') + \hat{\g}(\x)^{\text{T}} \nabla_{\x'} \mathcal{K}_{\x \x'} + \nabla_{\x} \mathcal{K}_{\x \x'}^{\text{T}} \hat{\g}(\x') + \text{Tr}(\nabla_{\x, \x'} \mathcal{K}_{\x \x'} )\right].
+\label{eq:ksd_transformed}
+\end{equation}
+In practice KSD is estimated with samples $\{ \x^k \}_{k=1}^K \sim q$, and simple derivations show that the V-statistic of KSD can be reformulated as $\mathcal{S}_{V}^2(q, \hat{q}) = \frac{1}{K^2} \text{Tr} (\hat{\Grad}^{\text{T}} \K \hat{\Grad} + 2 \hat{\Grad}^{\text{T}} \langle \nabla, \K \rangle) + C$.
+%
+Thus the $l_2$ error in (\ref{eq:stein_objective}) is equivalent to the V-statistic of KSD if $\h(\x) = \mathcal{K}(\x, \cdot)$, and we have the following:
+\begin{theorem}
+$\hat{\Grad}_V^{\text{\emph{Stein}}}$ is the solution of the following KSD V-statistic minimisation problem
+\begin{equation}
+\hat{\Grad}_V^{\text{\emph{Stein}}} = \argmin_{\hat{\Grad} \in \mathbb{R}^{K \times d}} \quad \mathcal{S}_{V}^2(q, \hat{q}) + \frac{\eta}{ K^2} ||\hat{\Grad}||_F^2 .
+\end{equation}
+\label{thm:stein_ksd}
+\vspace{-0.2in}
+\end{theorem}
+%
+One can also minimise the U-statistic of KSD to obtain gradient approximations, and a full derivation of which, including the optimal solution, can be found in Appendix \ref{sec:appendix_stein}. In experiments we use V-statistic solutions and leave comparisons between these methods to future work.
+
+\subsection{Comparisons to existing kernel-based gradient estimators}
+There exist other gradient estimators that do not require explicit evaluations of $\nabla_{\x} \log q(\x)$, e.g.~the denoising auto-encoder (DAE) \citep{vincent:denoising2008, vincent:denoising2011, alain:denoising2014} which, with infinitesimal noise, also provides an estimate of $\nabla_{\x} \log q(\x)$ at convergence. However, applying such gradient estimators result in a double-loop optimisation procedure since the gradient approximation is repeatedly required for fitting implicit distributions, which can be significantly slower than the proposed approach. Therefore we focus on ``quick and dirty'' approximations and only include comparisons to kernel-based gradient estimators in the following.
+
+\subsubsection{KDE gradient estimator: plug-in estimator with density estimation}
+A naive approach for gradient approximation would first estimate the intractable density $\hat{q}(\x) \approx q(\x)$ (up to a constant), then approximate the exact gradient by $\nabla_{\x} \log \hat{q}(\x) \approx \nabla_{\x} \log q(\x)$. Specifically, \cite{singh:kernel_gradient1977} considered kernel density estimation (KDE) 
+$\hat{q}(\x) = \frac{1}{K} \sum_{k=1}^K \mathcal{K}(\x, \x^k) \times C.$, then differentiated through the KDE estimate to obtain the gradient estimator:
+\begin{equation}
+\hat{\Grad}^{\text{KDE}}_{ij} = \sum_{k=1}^K \nabla_{x^i_j} \mathcal{K}(\x^i, \x^k) / \sum_{k=1}^K \mathcal{K}(\x^i, \x^k).
+\label{eq:kde_estimator}
+\end{equation}
+%
+Interestingly for translation invariant kernels $\mathcal{K}(\x, \x') = \mathcal{K}(\x - \x')$ the \emph{KDE gradient estimator} (\ref{eq:kde_estimator}) can be rewritten as $\hat{\Grad}^{\text{KDE}} = -\text{diag}\left( \K \bm{1} \right)^{-1} \langle \nabla, \K \rangle.$
+Inspecting and comparing it with the Stein gradient estimator (\ref{eq:stein_estimator}), one might notice that the Stein method uses the full kernel matrix as the pre-conditioner, while the KDE method computes an averaged ``kernel similarity'' for the denominator. We conjecture that this difference is key to the superior performance of the Stein gradient estimator when compared to the KDE gradient estimator (see later experiments). The KDE method only collects the similarity information between $\x^k$ and other samples $\x^j$ to form an estimate of $\nabla_{\x^k} \log q(\x^k)$, whereas for the Stein gradient estimator, the kernel similarity between $\x^i$ and $\x^j$ for all $i, j \neq k$ are also incorporated. Thus it is reasonable to conjecture that the Stein method can be more sample efficient, which also implies higher accuracy when the same number of samples are collected.
+
+\subsubsection{Score matching gradient estimator: minimising MSE}
+\label{sec:score_matching}
+The KDE gradient estimator performs indirect approximation of the gradient via density estimation, which can be inaccurate. An alternative approach directly approximates the gradient $\nabla_{\x} \log q(\x)$ by minimising the expected $\ell_2$ error w.r.t.~the approximation $\hat{\g}(\x) = \left(\hat{g}_1(\x), \cdots, \hat{g}_d(\x) \right)^{\text{T}}$:
+\begin{equation}
+\mathcal{F}(\hat{\g}) := \mathbb{E}_{q} \left[ || \hat{\g}(\x) - \nabla_{\x} \log q(\x) ||_2^2 \right].
+\label{eq:fisher_divergence}
+\end{equation}
+It has been shown in \cite{hyvarinen:score2005} that this objective can be reformulated as
+\begin{equation}
+\mathcal{F}(\hat{\g}) = \mathbb{E}_{q} \left[ || \hat{\g}(\x) ||_2^2 + 2 \langle \nabla, \hat{\g}(\x) \rangle \right] + C, \quad \langle \nabla, \hat{\g}(\x) \rangle = \sum_{j=1}^d \nabla_{x_j} \hat{g}_j(\x).
+\label{eq:score_matching_objective}
+\end{equation}
+The key insight here is again the usage of integration by parts: after expanding the $\ell_2$ loss objective, the cross term can be rewritten as
+$\mathbb{E}_q \left[ \hat{\g}(\x)^{\text{T}} \nabla_{\x} \log q(\x) \right] = -\mathbb{E}_q \left[ \langle \nabla, \hat{\g}(\x) \rangle \right],$
+if assuming the boundary condition (\ref{eq:boundary_condition}) for $\hat{\g}$ (see (\ref{eq:integration_by_parts})). 
+%
+The optimum of (\ref{eq:score_matching_objective}) is referred as the \emph{score matching gradient estimator}. 
+%
+The $\ell_2$ objective (\ref{eq:fisher_divergence}) is also called \emph{Fisher divergence} \citep{johnson:itbook2004} which is a special case of KSD (\ref{eq:ksd}) by selecting $\mathcal{K}(\x, \x') = \delta_{\x = \x'}$. Thus the Stein gradient estimator can be viewed as a generalisation of the score matching estimator. 
+%
+%A slightly different approach \citep{sasaki:gradient2015} proposes an estimator for $\nabla_{\x} q(\x)$, by minimising the $l_2$ error $\int (\hat{g}_j(\x) - \nabla_{x_j} q(\x))^2 d\x$ and removing explicit calculations of $\nabla_{\x} q(\x)$ in an analogous way as to derive (\ref{eq:score_matching_objective}). 
+
+The comparison between the two estimators is more complicated. Certainly by the Cauchy-Schwarz inequality the Fisher divergence is stronger than KSD in terms of detecting convergence \citep{liu:ksd2016}. However it is difficult to perform direct gradient estimation by minimising the Fisher divergence, since (i) the Dirac kernel is non-differentiable so that it is impossible to rewrite the divergence in a similar form to (\ref{eq:ksd_transformed}), and (ii) the transformation to (\ref{eq:score_matching_objective}) involves computing $\nabla_{\x} \hat{\g}(\x)$. So one needs to propose a \emph{parametric} approximation to $\Grad$ and then optimise the associated parameters accordingly, and indeed \cite{sasaki:gradient2014} and \cite{strathmann:kmc2015} derived a parametric solution by first approximating the log density up to a constant as
+$\log \hat{q}(\x) := \sum_{k=1}^K a_k \mathcal{K}(\x, \x^k) + C$,
+then minimising (\ref{eq:score_matching_objective}) to obtain the coefficients $\hat{a}^{\text{score}}_k$ and constructing the gradient estimator as
+\begin{equation}
+\hat{\Grad}^{\text{score}}_{i\cdot} = \sum_{k=1}^{K} \hat{a}^{\text{score}}_k \nabla_{\x^i} \mathcal{K}(\x^i, \x^k).
+\label{eq:grad_parametric_estimator}
+\end{equation}
+%
+Therefore the usage of parametric estimation can potentially remove the advantage of using a stronger divergence. Conversely, the proposed Stein gradient estimator (\ref{eq:stein_estimator}) is \emph{non-parametric} in that it directly optimises over functions evaluated at locations $\{ \x_k \}_{k=1}^K$. 
+%
+This brings in two key advantages over the score matching gradient estimator: (i) it removes the \emph{approximation error} due to the use of restricted family of parametric approximations and thus can be potentially more accurate; (ii) it has a much simpler and \emph{ubiquitous} form that applies to \emph{any kernel satisfying the boundary condition}, whereas the score matching estimator requires tedious derivations for different kernels repeatedly (see Appendix \ref{sec:appendix_stein}). 
+
+In terms of computation speed, since in most of the cases the computation of the score matching gradient estimator also involves kernel matrix inversions, both estimators are of the same order of complexity, which is $\mathcal{O}(K^3 + K^2 d)$ (kernel matrix computation plus inversion). Low-rank approximations such as the Nystr\"om method \citep{smola:sparse2000, williams:kernel2001} can enable speed-up, but this is not investigated in the paper. Again we note here that kernel-based gradient estimators can still be faster than e.g.~the DAE estimator since no double-loop optimisation is required. Certainly it is possible to apply early-stopping for the inner-loop DAE fitting. However the resulting gradient approximation might be very poor, which leads to unstable training and poorly fitted implicit distributions.
+
+\vspace{1em}
+\begin{tcolorbox}
+\textbf{Remark} (score matching methods)\textbf{.}
+As a side note, score matching can also be used to learn the parameters of an unnormalised density. In this case the target distribution $q$ would be the data distribution and $\hat{q}$ is often a Boltzmann distribution with intractable partition function. As a parameter estimation technique, score matching is also related to contrastive divergence \citep{hinton:cd2002}, pseudo likelihood estimation \citep{hyvarinen:pseudolikelihood2006}, and denoising auto-encoders \citep{vincent:denoising2011}. Generalisations of score matching methods are also presented in \citep{lyu:score2009, marlin:rbm2010}.
+\end{tcolorbox}
+
+\subsection{Adding predictive power}
+\label{sec:predictive_estimator}
+Though providing potentially more accurate approximations, the non-parametric estimator (\ref{eq:stein_estimator}) has no predictive power as described so far. Crucially, many tasks in machine learning require predicting gradient functions at samples drawn from distributions other than $q$, for example, in MLE $q(\x)$ corresponds to the model distribution which is learned using samples from the data distribution instead. To address this issue, we derive two \emph{predictive} estimators, one generalised from the non-parametric estimator and the other minimises KSD using parametric approximations.
+
+\paragraph{Predictions using the non-parametric estimator.}
+
+Let us consider an unseen datum $\y$. If $\y$ is sampled from $q$, then one can also apply the non-parametric estimator (\ref{eq:stein_estimator}) for gradient approximation, given the observed data $\X = \{\x^1, ..., \x^K \} \sim q$. Concretely, if writing $\hat{\g}(\y) \approx \nabla_{\y} \log q(\y) \in \mathbb{R}^{d \times 1}$ then the non-parametric Stein gradient estimator computed on $\X \cup \{\y\}$ is
+\begin{equation*}
+\begin{bmatrix}
+\hat{\g}(\y)^{\text{T}} \\
+\hat{\Grad}
+\end{bmatrix}
+= -( \K^* + \eta \bm{I} )^{-1} 
+\begin{bmatrix}
+\nabla_{\y} \mathcal{K}(\y, \y) + \sum_{k=1}^{K} \nabla_{\x^k} \mathcal{K}(\y, \x^k) \\
+\langle \nabla, \K \rangle + \nabla_{\y} \mathcal{K}(\cdot, \y)
+\end{bmatrix}
+, \quad 
+\K^* = \begin{bmatrix}
+    \K_{\y \y}       & \K_{\y\X} \\
+    \K_{\X \y}       & \K
+\end{bmatrix},
+\end{equation*}
+with $\nabla_{\y} \mathcal{K}(\cdot, \y)$ denoting a $K \times d$ matrix with rows $\nabla_{\y} \mathcal{K}(\x^k, \y)$, and $\nabla_{\y} \mathcal{K}(\y, \y)$ only differentiates through the second argument. Thus by simple matrix calculations, we have:
+\begin{equation}
+\begin{aligned}
+\nabla_{\y} \log q(\y)^{\text{T}} \approx& -\left(\K_{\y\y} + \eta - \K_{\y\X} (\K + \eta \mathbf{I})^{-1} \K_{\X\y} \right)^{-1} \\&\left( \nabla_{\y} \mathcal{K}(\y, \y) + \sum_{k=1}^{K} \nabla_{\x^k} \mathcal{K}(\y, \x^k) + \K_{\y\X} \hat{\Grad}_{V}^{\text{Stein}} - \K_{\y\X} (\K + \eta \mathbf{I})^{-1} \nabla_{\y} \mathcal{K}(\cdot, \y) \right).
+\end{aligned}
+\label{eq:stein_estimator_predict}
+\end{equation}
+For translation invariant kernels, typically $\nabla_{\y} \mathcal{K}(\y, \y) = \bm{0}$, and more conveniently, 
+$$ \nabla_{\x^k} \mathcal{K}(\y, \x^k) = \nabla_{\x^k} (\x^k - \y) \nabla_{(\x^k - \y)} \mathcal{K}(\x^k - \y) = - \nabla_{\y} \mathcal{K}(\x^k, \y).$$
+Thus equation (\ref{eq:stein_estimator_predict}) can be further simplified to (with column vector $\bm{1} \in \mathbb{R}^{K \times 1}$)
+\begin{equation}
+\begin{aligned}
+\nabla_{\y} \log q(\y)^{\text{T}} \approx& -\left(\K_{\y\y} + \eta - \K_{\y\X} (\K + \eta \mathbf{I})^{-1} \K_{\X\y} \right)^{-1} \\&\left( \K_{\y\X} \hat{\Grad}_{V}^{\text{Stein}} - \left( \K_{\y\X} (\K + \eta \mathbf{I})^{-1} + \bm{1}^{\text{T}} \right) \nabla_{\y} \mathcal{K}(\cdot, \y) \right).
+\end{aligned}
+\label{eq:stein_estimator_predict_simplified}
+\end{equation}
+%
+In practice one would store the computed gradient $\hat{\Grad}_{V}^{\text{Stein}}$, the kernel matrix inverse $(\K + \eta \mathbf{I})^{-1}$ and $\eta$ as the ``parameters'' of the predictive estimator.
+%
+For a new observation $\y \sim p$ in general, one can ``pretend'' $\y$ is a sample from $q$ and apply the above estimator as well. The approximation quality depends on the similarity between $q$ and $p$, and we conjecture here that this similarity measure, if can be described, is closely related to the KSD.
+ 
+\paragraph{Fitting a parametric estimator using KSD.}
+The non-parametric predictive estimator could be computationally demanding. Setting aside the cost of fitting the ``parameters'', in prediction the time complexity for the non-parametric estimator is $\mathcal{O}(K^2 + Kd)$. Also storing the ``parameters'' needs $\mathcal{O}(Kd)$ memory for $\hat{\Grad}_{V}^{\text{Stein}}$ and $(\K + \eta \mathbf{I})^{-1}$. These costs make the non-parametric estimator undesirable for high-dimensional data, since in order to obtain accurate predictions it often requires $K$ scaling with $d$ as well. To address this, one can also minimise the KSD using parametric approximations, in a similar way as to derive the score matching estimator in Section \ref{sec:score_matching}. 
+%
+More precisely, we define a parametric approximation in a similar fashion as (\ref{eq:grad_parametric_estimator}), and in Appendix \ref{sec:appendix_stein} we show that if the RBF kernel is used for both the KSD and the parametric approximation, then the linear coefficients $\bm{a} = (a_1, ..., a_K)^{\text{T}}$ can be calculated analytically: $\hat{\bm{a}}_{V}^{\text{Stein}} = (\bm{\Lambda} + \eta \mathbf{I})^{-1} \bm{b}$, where
+\begin{equation}
+\begin{aligned}
+\bm{\Lambda} =& \mathbb{X} \odot (\K \K \K) + \K (\K \odot \mathbb{X}) \K - ((\K\K) \odot \mathbb{X}) \K - \K ((\K\K) \odot \mathbb{X}), \\
+\bm{b} =& ( \K \text{diag}(\mathbb{X}) \K + (\K \K) \odot \mathbb{X} - \K (\K \odot \mathbb{X}) - (\K \odot \mathbb{X}) \K ) \bm{1},
+\end{aligned}
+\end{equation}
+%
+with $\odot$ denoting element-wise product, and $\mathbb{X}$ denoting the ``gram matrix'' that has elements $\mathbb{X}_{ij} = (\x^i)^{\text{T}} \x^j$. Then for an unseen observation $\y \sim p$ the gradient approximation returns $\nabla_{\y} \log q(\y) \approx (\hat{\bm{a}}^{\text{Stein}}_{V})^{\text{T}} \nabla_{\y} \mathcal{K}(\cdot, \y)$. In this case one only maintains the linear coefficients $\hat{\bm{a}}^{\text{Stein}}_{V}$ and computes a linear combination in prediction, which takes $\mathcal{O}(K)$ memory and $\mathcal{O}(Kd)$ time and therefore is computationally cheaper than the non-parametric prediction model (\ref{eq:stein_estimator_predict}).
+
+

@@ -1,0 +1,35 @@
+\chapter{Wild Approximate Inference: Why and How}
+\label{chap:wild}
+
+% **************************** Define Graphics Path **************************
+\ifpdf
+    \graphicspath{{Chapter5/figs/Raster/}{Chapter5/figs/PDF/}{Chapter5/figs/}}
+\else
+    \graphicspath{{Chapter5/figs/Vector/}{Chapter5/figs/}}
+\fi
+
+The design of approximating distributions is equally, if not more, crucial to the invention of optimisation algorithms such as the two algorithms presented in previous chapters. Mean-field approximations are often ineffective! Apparently if the $\mathcal{Q}$ family is expressive enough to contain the exact posterior, variational inference, either with KL divergence or R{\'e}nyi divergence, would return it as the only global optimum. Hence if a more complex structure is included in the q distribution, the approximation might become much more accurate and potentially even exact. For this purpose, it would be useful to use universal functional approximators, e.g.~neural networks, to expand the distribution family of approximations. However, it becomes very challenging to use these flexible approximations due to many restrictions, which cannot be addressed by simply investing more computational resources (say more running time and memory). 
+
+In recent years, one major research direction is to go beyond mean-field methods via development of flexible $q$ distributions, which specifically addresses the intractability issues when applied to VI. For example, invertible transformations are utilised to construct $q$ distributions which allow analytical evaluations of the approximate posterior density \citep{rezende:flow2015, kingma:iaf2016, louizos:multiplicative2017}. Mixture distributions of more flexible forms are also introduced to capture the possible multi-modality of the exact posterior, with further approximations being proposed to account for extra computational challenges \citep{salimans:mcmcvi2015, tran:vgp2016, ranganath:hvm2016,maaloe:agdm2016}. Though effective, these methods are complicated for practitioners to understand, let alone the design work itself that requires lots of care.
+
+In the second theme of the thesis, an alternative research direction will be presented towards using flexible approximations in approximate inference. Concretely, instead of designing approximate posterior distributions that fit into standard frameworks like VI, we would like to develop optimisation algorithms that enable approximations of \emph{arbitrary} form. This goal is further justified by revisiting the fundamental problem that approximate inference is trying to solve -- approximating an integral both accurately and quickly. Throughout the discussions, readers will realise that many computational constraints are irrelevant to inference itself: it is the chosen optimisation algorithm that introduces additional constraints on the $q$ distribution design. Consequently, successful development of algorithms that present no more constraints would enable the usage of \emph{arbitrary} approximate distributions, allowing practitioners to choose the $q$ distribution that fits best to their particular tasks. 
+%
+In the following, we will discuss several research directions towards this goal, with one specific example detailed in the next chapter. 
+
+The rest of the chapter is organised as follows. In Section \ref{sec:chap5_wild_concept} we revisit the tractability issues in Bayesian inference and argue that \emph{fast sampling} should be the only condition required by Monte Carlo based approximate inference algorithms. Based on this observation, we suggest using \emph{implicit} distributions as approximate posterior distributions, with some examples provided in Section \ref{sec:chap5_wild_dist} to demonstrate the flexibility of this distribution class. As implicit distributions do not exhibit tractable densities, we propose a few research directions towards fitting these approximate posteriors in Section \ref{sec:chap5_wild_solutions}. Lastly we briefly discuss a research theme -- meta-learning for approximate inference algorithms -- in Section \ref{sec:chap5_wild_applications}, which is enabled by wild approximate inference methods.
+
+\vspace{1em}
+\begin{tcolorbox}
+\textbf{Remark} (Related work)\textbf{.}
+The material in this chapter was originally presented in a NIPS 2016 approximate inference workshop abstract ``Wild Variational Approximations'' which is a joint work with Qiang Liu \citep{li:wild2016} (see publication page). Before that the research scheme had not been established in a formal way, except for very few attempts \citep{ranganath:ovi2016, wang:amortisedsvgd2016}. Later on, several groups explored an approach that blends VI and (adversarial) density ratio estimation \citep{huszar:implicit2017, tran:implicit2017, mescheder:avb2017, karaletsos:adversarial_mp2016, shi:kivi2018}, which corresponds to one of the algorithmic options described in this chapter. We argue that our work is more formal and general: we justify this line of research by examining the central topics in approximate inference, and point out four research directions for developing algorithms that can fit arbitrary $q$ distributions that enable fast sampling.
+\end{tcolorbox}
+
+\input{Chapter5/tractability}
+
+\input{Chapter5/wild_q2}
+
+\input{Chapter5/proposals}
+
+\input{Chapter5/applications}
+
+\input{Chapter5/summary}
