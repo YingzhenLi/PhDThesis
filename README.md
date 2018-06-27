@@ -27,4 +27,4 @@ If any of the materials is used in your research/work, consider citing the thesi
 ## Acknowledgement
 I have an acknowlegdement page in the thesis to thank my supervisor, my collaborators so far and some senior researchers. I wanted to put these people's names here again (in alphabetical order), without them I can never have finished this thesis and many of my other papers.
 
-Thang Bui, Yarin Gal, Zoubin Ghahramani, Wenbo Gong, Daniel Hernandez-Lobato, Jose Miguel Hernandez-Lobato, Qiang Liu, Chao Ma, Stephan Mandt, Cuong Nguyen, Sebastian Nowozin, Ulrich Paquet, Mark Rowland and Martin Szummer.
+John Bradshaw, Thang Bui, Yarin Gal, Zoubin Ghahramani, Wenbo Gong, Daniel Hernandez-Lobato, Jose Miguel Hernandez-Lobato, Qiang Liu, Chao Ma, Stephan Mandt, Cuong Nguyen, Sebastian Nowozin, Ulrich Paquet, Mark Rowland, Yash Sharma and Martin Szummer.
