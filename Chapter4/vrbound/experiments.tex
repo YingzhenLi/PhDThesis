@@ -1,0 +1,80 @@
+\section{Experiments}
+We evaluate the VR bound methods on Bayesian neural networks and variational auto-encoders. The implementation of all the experiments in Python is released at \url{https://github.com/YingzhenLi/VRbound}.
+
+\subsection{Bayesian neural networks}
+
+The first experiment considers Bayesian neural network regression. The datasets are collected from the UCI dataset repository.\footnote{\url{http://archive.ics.uci.edu/ml/datasets.html}} We use a Gaussian prior $\bm{\theta} \sim \mathcal{N}(\bm{\theta}; \bm{0}, \bm{I})$ for the network weights and Gaussian approximation to the true posterior $q(\bm{\theta}) = \mathcal{N}(\bm{\theta}; \bm{\mu}_q, diag(\bm{\sigma}_q))$. We fit the parameters of $q$ and the noise level $\sigma$ by optimising the lower-bound. We follow the toy example in Section \ref{sec:vr_bound} and consider $\alpha \in \{-\infty, 0.0, 0.5, 1.0, +\infty \}$ in order to examine the effect of mass-covering/zero-forcing behaviour. Stochastic optimisation uses the energy approximation strategy proposed in Section \ref{sec:chap4_vrbound_large_scale_learning}. 
+
+For regression tests, we consider Protein and Year as the large datasets and the remainder as small datasets. For all small datasets we used single-layer neural networks with 50 hidden units (ReLUs), and for Protein and Year we used 100 units. The methods for comparison were run for $500$ epochs on the small datasets and $100$, $40$ epochs for the large datasets, respectively. We used ADAM \citep{kingma:adam2015} for optimisation with learning rate 0.001 and the standard setting for other parameters. For stochastic optimisation we used mini-batch size $M = 32$ and number of MC samples $K=100$ and $K=10$ for small and large datasets, respectively. The number of dataset random splits is 20 except for the large datasets, which is 5 and 1 for Protein and Year, respectively. 
+
+\begin{figure}[t]
+\centering
+    \includegraphics[width=1\linewidth]{Chapter4/vrbound/figs/results_all_bnn}
+    \caption{Test LL and RMSE results for Bayesian neural network regression. The lower the better. The error bars show 1-standard deviation across 20 random splits of the data.}
+    \label{fig:chap4_vrbound_bnn_results_all}
+\end{figure}
+%
+\begin{figure}
+\input{Chapter4/vrbound/tables/bnn_ll}
+\input{Chapter4/vrbound/tables/bnn_rmse}
+       
+\end{figure}
+
+We summarise the test negative log-likelihood (LL) and RMSE with standard error (across different random splits except for Year) for selected datasets in Figure \ref{fig:chap4_vrbound_bnn_results_all} and Table \ref{tab:chap4_vrbound_bnn_ll}, \ref{tab:chap4_vrbound_bnn_rmse}. In the tables the best performing results are underlined, while the worse cases are also bold-faced. These results indicate that for posterior approximation problems, the optimal $\alpha$ may vary for different datasets (although for Boston and Power the performances are very similar). 
+%
+
+It can be particularly tricky to approximate the posterior distribution of the weight matrices for a neural network. Since one can obtain the same output by swapping the positions of two hidden units and adjusting the corresponding in- and out-going weights, there exist symmetric modes in the exact posterior of the weight matrices. In this case mass-covering can be harmful, e.g.~for Naval and Energy datasets, methods with $\alpha < 1.0$ values seem to be under-performing, not only for predictive error but also for test log-likelihood measure. 
+But still, we observed two major trends. Zero-forcing/mode-seeking methods tend to focus on improving the predictive error. Mass-covering methods, on the other hand, returns better test log-likelihood, which has been shown empirically to be correlated with the quality of the approximated uncertainty estimate \citep{hernandez-lobato:pbp2015, gal:uncertainty2016, depeweg:bnn_rl2016}. In particular VI returns lower test log-likelihood for most of the datasets. Furthermore, $\alpha = 0.5$ produced overall good results for both test LL and RMSE, possibly because the skew symmetry is centred at $\alpha = 0.5$ and the corresponding divergence is the only symmetric distance measure in the family. Future work should develop algorithms to automatically select the best $\alpha$ values, although a naive approach could use validation sets. 
+
+\subsection{Variational auto-encoders}
+
+The second experiments considers variational auto-encoders for unsupervised learning. We mainly compare three approaches: VAE ($\alpha = 1.0$), IWAE ($\alpha = 0$), and VR-max ($\alpha = -\infty$), which are implemented upon the publicly available code.\footnote{\url{https://github.com/yburda/iwae}}
+%
+Four datasets are considered: Frey Face\footnote{\url{http://www.cs.nyu.edu/~roweis/data.html}} (with 10-fold cross validation), Caltech 101 Silhouettes\footnote{\url{https://people.cs.umass.edu/~marlin/data.shtml}}, MNIST\footnote{\url{http://yann.lecun.com/exdb/mnist/}} and OMNIGLOT\footnote{\url{https://github.com/brendenlake/omniglot}}. The VAE model has $L=1, 2$ stochastic layers with deterministic layers stacked between.  The detailed numbers of stochastic layers $L$, number of hidden units, and the activation function are summarised in Table \ref{tab:vae_arch}. The prefix of the number indicates whether this layer is \textbf{d}eterministic or \textbf{s}tochastic, e.g.~d500-s200 stands for a neural network with one deterministic layer of 500 units followed by a stochastic layer of 200 units. For Frey Face data we train the models using learning rate 0.0005 and mini-batch size 100. For MNIST and OMNIGLOT we reuse the settings from \cite{burda:iwae2016}: the training process runs for $3^i$ passes with learning rate $0.0001 \cdot 10^{-i/7}$ for $i = 0, ..., 7$, and the batch size is 20. For Caltech Silhouettes we use the same settings as MNIST and OMNIGLOT except that the training proceeded for $\sum_{i=0}^7 2^i = 255$ epochs. We reproduce the IWAE experiments to obtain a fair comparison, since the results in the original publication \citep{burda:iwae2016} mismatches those evaluated on the publicly available code.
+%
+\input{Chapter4/vrbound/tables/vae_architecture}
+%
+
+\begin{figure}
+\begin{minipage}{0.6\linewidth}
+\input{Chapter4/vrbound/tables/vae}
+\end{minipage}
+\hfill
+\begin{minipage}{0.35\linewidth}
+\centering
+ \includegraphics[width=1.00\linewidth]{Chapter4/vrbound/figs/bias_estimate.pdf} 
+ \captionof{figure}{Bias of sampling approximation to. Results for $K=5, 50$ samples are shown on the left and right, respectively.}
+ \label{fig:vae_bias}
+\end{minipage}
+\end{figure}
+%
+\begin{figure*}[!ht]
+ \centering
+ \subfigure[Log of ratio $R = w_{max} / (1 - w_{max})$]{
+ \includegraphics[width=0.37\linewidth]{Chapter4/vrbound/figs/weight_ratio.pdf}
+ \label{fig:weight_ratio}}
+ \hspace{0.4in}
+ \subfigure[Weights of samples.]{
+ \includegraphics[width=0.37\linewidth]{Chapter4/vrbound/figs/weight_distribution.pdf}
+ \label{fig:weight_distribution}}
+ \caption{Importance weights during training, see main text for details. Best viewed in colour.}
+\end{figure*}
+
+We report test log-likelihood results in Table \ref{tab:vae_ll} by computing $\log p(\bm{x}) \approx \hat{\mathcal{L}}_{0, 5000}(q; \bm{x})$ following \cite{burda:iwae2016}. We also present some samples from the VR-max trained auto-encoders in Figure \ref{fig:vae_samples}.
+%
+\begin{figure}
+ \centering
+  \includegraphics[width=0.6\linewidth]{Chapter4/vrbound/figs/vae_samples.pdf}
+  \caption{Sampled images from the the best models trained with IWAE (left) and VR-max (right).}
+  \label{fig:vae_samples}
+\end{figure}
+%
+Overall VR-max is almost indistinguishable from IWAE. Other positive alpha settings (e.g.~$\alpha = 0.5$) return worse results, e.g. $1374.64\pm5.62$ for Frey Face and $-85.50$ for MNIST with $\alpha = 0.5$, $L=1$ and $K=5$. These worse results for $\alpha > 0$ indicate the preference of getting tighter approximations to the likelihood function for MLE problems. Small negative $\alpha$ values (e.g.~$\alpha = -1.0, -2.0$) return better results on different splits of the Frey Face data, and overall the best $\alpha$ value is dataset-specific.\footnote{Since presentation of this work at NIPS 2016, \cite{bui:dgm2016} revisited this idea with slightly different architecture set-up, and showed that $\alpha \neq 0$ values are usually favoured over the IWAE approach. }
+
+VR-max's success might be explained by the tightness of the bound. To evaluate this, we compute the VR bounds on $100$ test datapoints using the 1-layer VAE trained on Frey Face, with $K=\{5, 50\}$ and $\alpha \in \{0, -1, -5, -50, -500 \}$. Figure \ref{fig:vae_bias} presents the estimated gap $\hat{\mathcal{L}}_{\alpha, K} - \hat{\mathcal{L}}_{0, 5000}$. The results indicates that $\hat{\mathcal{L}}_{\alpha, K}$ provides a lower-bound, agreeing with the theoretical results presented in Section \ref{sec:chap4_vrbound_sampling}, and that gap is narrowed as $\alpha \rightarrow -\infty$. Also increasing $K$ provides improvements. The standard error of estimation is almost constant for different $\alpha$ (with $K$ fixed), and is negligible when compared to the MC approximation bias.
+
+%
+Another explanation for VR-max's success is that, the sample with the largest normalised importance weight $w_{max}$ dominates the contributions of all the gradients.
+This is confirmed by tracking $R = \frac{w_{max}}{1 - w_{max}}$ during training on Frey Face (Figure \ref{fig:weight_ratio}). Also Figure \ref{fig:weight_distribution} shows the $10$ largest importance weights from $K=50$ samples in descending order, which exhibit an exponential decay behaviour, with the largest weight occupying more than $75\%$ of the probability mass. This means, the IWAE algorithm is not efficient in terms of sample efficiency, since the learning signal from back-propagation is dominated by the gradients computed on the particle with the largest weight.
+%
+It also indicates that, VR-max can provide a fast approximation to IWAE when tested on CPUs or multiple GPUs with high communication costs. Indeed our numpy implementation of VR-max achieves up to a 3 times speed-up compared to IWAE (9.7s vs.~29.0s per epoch, tested on Frey Face data with $K = 50$ and batch size $M = 100$, CPU info: Intel Core i7-4930K CPU @ 3.40GHz). However this speed advantage is less significant when the gradients can be computed very efficiently on a single GPU.

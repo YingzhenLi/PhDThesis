@@ -1,0 +1,49 @@
+\subsection{Bayesian neural networks}
+\label{sec:chap2_bnn}
+Another exciting application of Bayesian inference is a class of methods called Bayesian neural networks (Bayesian NNs, BNNs), which maintains the uncertainty of the weight matrix assignments. Originated in the late 80s and early 90s in the last century \citep{peterson:mean_field1987, mackay:practical1992, neal:bnn1992, hinton:mdl1993, neal:thesis1995},\footnote{For a detailed history see \citep[Section 2.2.1]{gal:uncertainty2016}.} it has recently attracted a lot of attention again, mainly due to the advance of modern approximate inference techniques. In this thesis we will also study BNNs as a test case for the developed approximate algorithms, and here we provide a concise review of the related key concepts. 
+
+We start by describing a normal deep neural network mapping $\y = \f_{\mparam}(\x)$ parameterised by a set of weights (and bias vectors which we omit here for simplicity) $\mparam = \{ \W^l \}_{l=1}^L$. Then given a training dataset $\data = \{ (\x_n, \y_n) \}_{n=1}^N$, one would first define a loss function $l(\y, \f_{\mparam}(\x))$ to measure the error between the supervision signal and the prediction, then train the neural network by minimising the empirical loss on the dataset
+$$\min_{\mparam} \ \mathcal{F}(\mparam) = \sum_{n=1}^N l(\y_n, \f_{\mparam}(\x_n)).$$
+Examples for such loss function include the mean squared error (or $\ell_2$ error) $l(\y, \f_{\mparam}(\x)) = || \y - \f_{\mparam}(\x) ||_2^2 $ for regression and cross entropy loss $l(\y, \f_{\mparam}(\x)) = -\y \log f_{\mparam}(\x) - (1 - \y) \log (1 - \f_{\mparam}(\x))$ for (binary) classification. To avoid overfitting, regularisers are often included in the optimisation objective, for example, adding an $\ell_2$ regulariser would return the following optimisation problem
+\begin{equation}
+\min_{\mparam} \ \mathcal{F}_{\text{MAP}}(\mparam) = \sum_{n=1}^N l(\y_n, \f_{\mparam}(\x_n) + \frac{\lambda}{2} || \mparam ||_2^2.
+\label{eq:chap2_nn_map}
+\end{equation}
+
+Let us consider the above training objective again but from a probabilistic modelling perspective. In this case the network weight matrices $\mparam$ are treated as random variables, and a Gaussian prior $p_0(\mparam) = \N(\mparam; \bm{0}, \lambda^{-1} \mathbf{I})$ is attached.\footnote{Sometimes other prior distributions might be preferred, e.g.~spike-and-slab prior \citep{neal:thesis1995, louizos:bayesian_compression2017}.} For many loss functions (e.g.~$\ell_2$ loss), the likelihood function of $\mparam$ is then defined as\footnote{This definition requires $\int \exp( - l(\y, \f_{\mparam}(\x)) d\y$ to be finite, which is true for many loss functions but not always the case.} 
+$$ p(\y | \x, \mparam) = \frac{1}{Z} \exp( - l(\y, \f_{\mparam}(\x)).$$
+See \cite{lecun:energy2006} for an example justification. For most loss functions (e.g. mean square error and cross entropy) the normalising constant $Z$ does not depend on the weights $\mparam$. Given the training dataset $\data$ the joint distribution is 
+$$ p(\data, \mparam) = p_0(\mparam) \prod_{n=1}^N p(\y_n | \x_n, \mparam),$$
+thus one can easily show that the maximum a posteriori (MAP) training $\max_{\mparam} \log p(\data, \mparam) $ is exactly equivalent to the problem of (\ref{eq:chap2_nn_map}). 
+
+After framing the deep neural network as a probabilistic model, a Bayesian approach would find the posterior of the network weights $p(\mparam| \data)$ and use the uncertainty information encoded in it for future predictions. Again the exact posterior is intractable, and approximate inference would fit an approximate posterior distribution $q_{\vparam}(\mparam)$ parameterised by the variational parameters $\vparam$ to the exact posterior, and then use it to compute the (approximate) predictive distribution.
+%
+As an example, here we consider a variational inference approach and write down the variational lower-bound accordingly \citep{hinton:mdl1993, barber:ensemble1998}
+\begin{equation}
+\mathcal{L}_{\text{VI}}(\vparam) = \sum_{n=1}^N \mathbb{E}_{q_{\vparam}} [ \log p(\y_n | \x_n, \mparam) ] - \KL[q_{\vparam}||p_0].
+\label{eq:chap2_nn_vi}
+\end{equation}
+Solving problem (\ref{eq:chap2_nn_vi}) with a degenerate variational approximation $q_{\vparam}(\mparam) = \delta_{\mparam = \vparam}$ would result in a MAP solution (\ref{eq:chap2_nn_map}), which is less desirable in terms of capturing uncertainty. However $q_{\vparam}$ should also not be too complicated in terms of the entailed computational complexity, as now $\mparam$ is typically a very long vector of thousands, or even millions of dimensions. Popular choices of such ``efficient'' variational approximations include the mean-field Gaussian approximation
+$$q_{\vparam}(\mparam) = \prod_{l=1}^L \prod_{i, j} \N(W_{ij}^l; \mu_{ij}^l, (\sigma_{ij}^l)^2 ), \quad \vparam = \{ \mu_{ij}^l, \sigma_{ij}^l \}_{i, j, l},$$
+which doubles the number of parameters to be optimised, and which is thus less memory demanding than a correlated Gaussian approximation for example. Also now the KL term in (\ref{eq:chap2_nn_vi}) has an analytical solution
+$$\KL[q_{\vparam}||p_0] = \sum_{i, j, l} \frac{1}{2} \left( \lambda (\mu_{ij}^l)^2 - 1 + \lambda (\sigma_{ij}^l)^2 - \log \lambda - 2 \log \sigma_{ij}^l \right) .$$ 
+But even so the error term $\mathbb{E}_{q}[\log p(\y | \x, \mparam)]$ is intractable due to the highly non-linear NN mapping $\f_{\mparam}$. Fortunately this issue is mitigated by employing the Monte Carlo (MC) approximation again:
+\begin{equation}
+\mathcal{L}_{\text{VI}}^{\text{MC}}(\vparam) = \sum_{n=1}^N \frac{1}{K} \sum_{k=1}^K [ \log p(\y_n | \x_n, \mparam^k) ] - \KL[q_{\vparam}||p_0], \quad \mparam^k \sim q_{\vparam}(\mparam).
+\end{equation}
+Usually to reduce the number of forward passes (i.e. computing $\log p(\y | \x, \mparam)$) $K$ is often a small number, even as little as $K=1$. Also for large datasets stochastic optimisation techniques are also applied, meaning that for mini-batch training with a subset $\{ (\x_m, \y_m) \}_{m=1}^M \sim \data^M$, the objective is (e.g.~for $K=1$)
+\begin{equation}
+\mathcal{L}_{\text{VI}}^{\text{MC}}(\vparam) = \frac{N}{M} \sum_{m = 1}^M \log p(\y_m | \x_m, \mparam) - \KL[q_{\vparam}||p_0], \quad \mparam \sim q_{\vparam}(\mparam).
+\label{eq:chap2_nn_mc_svi}
+\end{equation}
+If the KL divergence is intractable it can also be approximated by Monte Carlo, i.e. 
+$$\KL[q_{\vparam}||p_0] \approx \log q_{\vparam}(\mparam) - \log p_0(\mparam), ~ \mparam \sim q_{\vparam}.$$
+The reparameterisation trick discussed earlier is often applied to allow gradient back-propagation, and in the case of mean-field Gaussian approximations the weight matrices are sampled as $W_{ij}^l = \mu_{ij}^l + \sigma_{ij}^l \epsilon, ~ \epsilon \sim \N(\epsilon; 0, 1)$, and the log-likelihood terms in (\ref{eq:chap2_nn_mc_svi}) is then computed by $\log p(\y_m | \x_m, \bm{\mu} + \bm{\sigma} \odot \bm{\epsilon}) $.
+
+
+\vspace{1em}
+\begin{tcolorbox}
+\textbf{Remark} (Other approximate inference methods for BNNs)\textbf{.}
+Although we presented BNNs using VI, I shall point out that other approximate inference methods do apply.
+Milestone papers of approximate inference techniques developed for BNNs include: Laplace approximation \citep{mackay:practical1992}, minimum description length \citep{hinton:mdl1993} (which is equivalent to VI), hybrid/Hamiltonian Monte Carlo \citep{neal:thesis1995}, and variational inference \citep{barber:ensemble1998, graves:practical2011, blundell:bnn2015, gal:dropout2016}. Recent applications of BNNs using non-VI Bayesian methods include stochastic gradient MCMC \citep[for example]{korattikara:dark2015, li:sgld_nn2016}, assumed density filtering/EP \citep{hernandez-lobato:pbp2015} and those that will be presented in the later Chapters.
+\end{tcolorbox}

@@ -1,0 +1,52 @@
+\section{Sketching variational methods by constraint relaxations}
+\label{sec:appendix_relaxation}
+
+This is an optional section continuing the discussion of Section \ref{sec:chap2_ep_energy} in the main text. The material is adapted from my NIPS 2016 approximate inference workshop abstract (see publication page).
+
+\subsection{Further constraint relaxations by weighted averaging}
+
+In EP we need $N$ Lagrange multipliers $\{\bm{\lambda}_{-n} \}$ because of the individual moment matching constraint $\mathbb{E}_q[\bm{\Phi}] = \mathbb{E}_{\tilde{p}_n}[\bm{\Phi}]$. This can bring a large amount of memory burden for large datasets and ``big'' models. To solve this issue, we start from the re-formulated energy function (\ref{eq:alpha_bethe}), and then replace the $N$ number of equality constraints $q = \tilde{p}_n$ by a single one that we call \emph{weighted averaged moment matching}: $\mathbb{E}_q[\bm{\Phi}] = \sum_n w_n \mathbb{E}_{\tilde{p}_n}[\bm{\Phi}]$, with $\bm{w} = (w_1, ..., w_n)$ denote the weighing vector that sum to 1. The motivation here is to reduce the number of Lagrange multipliers (thus saving memory), but still to ensure $q$ is close to the tilted distributions in some averaged measure. Empirical evaluations have shown state-of-the-art performances for this relaxation method \citep{hernandez-lobato:bbalpha2016} even though it is a very bad approximation to the $N$ equality constraints in (\ref{eq:vi_constrained}). 
+
+%
+We proceed to solve the corresponding constrained optimisation problem. We also apply the KL duality (\ref{eq:kl_duality}) to (\ref{eq:alpha_bethe}) (but for simplicity now we directly use $\bm{\lambda}_q^T \bm{\Phi}(\theta)$), and denote the transformed energy (in a similar way as in (\ref{eq:bethe_energy_transformed})) as $\mathcal{F}_{\bm{\alpha}}( \{ \tilde{p}_n \}, q, \bm{\lambda}_q)$. Now we have the following Lagrangian
+\begin{equation}
+\min_{q, \{ \tilde{p}_n \}, \bm{\lambda}_q} \max_{\lambda, \{ \nu_n \}, \nu } \mathcal{F}_{\bm{\alpha}}( \{ \tilde{p}_n \}, q, \bm{\lambda}_q) + \bm{\lambda}^{T}(\mathbb{E}_q[\bm{\Phi}] - \sum_n w_n \mathbb{E}_{\tilde{p}_n}[\bm{\Phi}]) + ...
+\label{eq:bbalpha_local_lagranrian}
+\end{equation}
+%
+where we have omitted the multipliers for the normalisation constraints. This returns
+$
+\tilde{p}_n(\mparam) = \frac{1}{Z_n} p_0(\mparam)f_n(\mparam)^{\alpha_n} \exp \left[ \alpha_n w_n \bm{\lambda}^T \bm{\Phi}(\mparam) \right],
+$
+but the fixed point condition for $q$ becomes $\left(\sum_n \frac{1}{\alpha_n} - 1  \right)\bm{\lambda}_q = \bm{\lambda}$, indicating $\bm{\lambda}$ as a function of $\bm{\lambda}_q$. Thus we can directly obtain a single-loop algorithm for the following minimisation
+\begin{equation}
+\min_{\bm{\lambda}_q} \left( \sum_n \frac{1}{\alpha_n} - 1 \right) \log Z_q - \sum_n \frac{1}{\alpha_n} \log \int p_0(\mparam) f_n(\mparam)^{\alpha_n} \exp \left[\beta_n \bm{\lambda}_q \bm{\Phi}(\mparam) \right] d\mparam
+\end{equation}
+with $\beta_n = \left(\sum_m \frac{1}{\alpha_m} - 1 \right) \alpha_n w_n$. Black-box alpha (BB-$\alpha$) \citep{hernandez-lobato:bbalpha2016} is a special case of the above by defining $\alpha_n = \alpha, \forall n$ and 
+$w_n = (\frac{1}{\alpha_n} - \frac{1}{N}) / (\sum_m \frac{1}{\alpha_m} - 1) = \frac{1}{N}$,
+which leads to $\beta_n = 1 - \frac{\alpha}{N}$. In this case the weighing vector $\bm{w}$ is implicitly defined by the choice of $\alpha$.
+
+\vspace{1em}
+\begin{tcolorbox}
+\textbf{Remark.} The original derivation of BB-$\alpha$ in \citet{hernandez-lobato:bbalpha2016} directly started from the power EP energy (\ref{eq:pep_energy}) and tied the local parameters $\bm{\lambda}_n$ (or in other words it added new constraints in the dual space). Our derivation here provides a proper justification from a constrained primal energy optimisation perspective. 
+\end{tcolorbox}
+
+\subsection{Distributed black-box alpha}
+Variational methods have been shown to be very efficient for distributed computing, e.g. see \citet{gelman:dep2014, xu:sms2014, teh:snep2015} for EP and \citet{broderick:stream2013} for VI. In our set-up this is equivalent to a different decoupling strategy. It first groups the factors into $K$ subset-level factors $F_k = \prod f_{n_k}$ with the corresponding index set $N_k = \{n_k\}$, where usually $N_i \cap N_j = \emptyset,\ i \neq j$ and $\cup_k N_k = \{1, ..., N\}$, then it performs EP at the group level. Now we rewrite the variational free energy and also assume for simplicity $\alpha_k \neq 0$ and $\alpha_{n_k} = \alpha_k$ for $n_k \in N_k$:
+\begin{equation}
+\mathcal{F}_{\text{VFE}}(q) = \left(1 - \sum_{k} \frac{1}{\alpha_k} \right) \mathrm{KL}[q||p_0] - \sum_k \frac{1}{\alpha_k} \mathbb{E}_{q} \left[ \log \frac{p_0(\bm{\theta}) F_k(\bm{\theta})^{\alpha_k}}{q(\bm{\theta})} \right].
+\label{eq:vfe_distributed}
+\end{equation}
+%
+One can easily show the distributed EP objective by repeating the decoupling and Lagrangian computation procedures as in Section \ref{sec:vfe_to_bethe}, with the moment-matching constraints applied to $\tilde{p}_k$ for subset-level factor $F_k$ rather than for individual factor $f_n$. An equivalent derivation starts from power EP in Section \ref{sec:vfe_to_pep} but with an extra set of constraints restricting $\tilde{p}_i = \tilde{p}_j, \forall i, j \in N_k$. Simple calculations reveal that in this case $1/\alpha_k$ in (\ref{eq:vfe_distributed}) equals to the sum of $1/\alpha_{n_k}$ for all $n_k \in N_k$.
+
+Monte Carlo (MC) methods are deployed to compute these moments since now we incorporate multiple factors in the second integral. The EP/MC mixed approach combines the advantages from both worlds: it provides more accurate approximations than full EP since it's less ``local'', while it remains faster than full MC methods (as the tilted distribution contains less difficult factors) and is straight-forward to parallelise. In an extreme case where $K=1$ and $\alpha \neq 0, 1$, the above derivation recovers the VR bound (see Chapter \ref{chap:vrbound}), with the $q$ distribution restricted to exponential families. 
+
+We further present a mixed approach that nests BB-$\alpha$ in distributed EP, and again for simplicity we assume $\alpha_{n_k} = \alpha_k$ for $n_k \in N_k$. We still decouple all the $q$ distributions associated with factor $\tilde{f}_n$ to $\tilde{p}_{n}$ as in (\ref{eq:alpha_bethe}), but then relax the equality constraint to
+$\frac{1}{|N_k|} \sum_{n_k \in N_k} \mathbb{E}_{\tilde{p}_{n_k}}[\bm{\Phi}] = \mathbb{E}_q[\bm{\Phi}], \ \forall k.$
+Solving the Lagrangian and defining $\bm{\lambda}_q = \sum_k \bm{\lambda}_k$ returns the following energy:
+\begin{equation}
+(\sum_k \frac{|N_k|}{\alpha_k} - 1) \log Z_q - \sum_k \frac{1}{\alpha_k} \sum_{n_k \in N_k} \log \int p_0(\bm{\theta}) f_{n_k}(\bm{\theta})^{\alpha_k} \exp \left[ (\bm{\lambda}_q - \frac{\alpha_k}{|N_k|} \bm{\lambda}_k)^T \bm{\Phi}(\bm{\theta}) \right] d \bm{\theta},
+\end{equation}
+This means the local parameters $\bm{\lambda}_k$ are updated in a BB-$\alpha$ fashion, while the final approximation $q$ is constructed in an EP way. Potentially this approach can both reduce the approximation bias of BB-$\alpha$ (as we use more than one set of local parameters) and be computationally faster than distributed EP (as often now the moments for the tilted distribution become tractable).
+

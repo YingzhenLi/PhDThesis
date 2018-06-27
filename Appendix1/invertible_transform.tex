@@ -1,0 +1,82 @@
+\subsection{Invertible transformations and normalising flows}
+In Section \ref{sec:chap5_wild_dist} we have discussed distributions constructed by warping a random noise variable through a deep neural network. However the non-linear mapping $\f$ might not be invertible, resulting in an intractable density. Instead, here we introduce the idea of \emph{invertible transformations} which allow tractable evaluation point-wise, and discuss extensions such as normalising flows.
+
+Now consider adding the invertibility constraint to the non-linear mapping $\f$ which acts on the latent variables $\z \in \mathbb{R}^d$. This means:
+$$\f: \mathbb{R}^d \rightarrow \mathbb{R}^d, \quad \exists \g: \mathbb{R}^{d} \rightarrow \mathbb{R}^d 
+\quad \text{ s.t. } \quad \g \circ \f(\z) = \f \circ \g(\z) = \z.$$
+In the following we also write $\f^{-1} = \g$, and assume the mapping is smooth, i.e.~$\nabla_{\z} \f(\z)$ exists everywhere. Therefore, given a distribution $q(\z)$ and by temporarily denoting $\y = \f(\z)$, we have
+\begin{equation}
+q(\y) = q(\z) | \text{det}(\nabla_{\z} \f(\z)) |^{-1}.
+\end{equation}
+Then when density evaluation is required on a given $\y$, one would compute the inverse mapping $\z = \f^{-1}(\y)$, compute the density value $q(\z)$, and obtain the determinant of the Jacobian $\text{det}(\nabla_{\z}\f (\z))$. We can further construct a highly non-linear invertible mapping by composing invertible transforms, i.e.
+$$ \z_{T} = \f_{T} \circ \f_{T-1} \circ \cdot \cdot \cdot \circ \f_{1} (\z_0), $$
+which induces a random variable $\z_T$ given the distribution of $\z_0$:
+\begin{equation}
+q(\z_{T}) = q(\z_0) \prod_{t=1}^T  | \text{det}(\nabla_{\z_{t-1}} \f_t(\z_{t-1})) |^{-1}.
+\end{equation}
+This type of distributions is named \emph{normalising flow} distributions, and in principle one can construct \emph{arbitrarily} complex distributions by increasing $T$ or having expressive mappings $\f_t$. However, in practice the representation power of these distributions is largely restrictive due to the constraints \emph{introduce by the algorithms to fit them}. We provide two application scenarios to explain why.
+\begin{itemize}
+\item Maximum likelihood training for generative models. \\
+Consider a generative model defined as the following:
+$$\z_0 \sim p(\z_0) = \mathcal{N}(\z; \bm{0}, \mathbf{I}), \quad \x = \z_T = \f_{T} \circ \f_{T-1} \circ \cdot \cdot \cdot \circ \f_{1} (\z_0),$$
+in which the parameters of the mappings $\f_t$ are collected into $\mparam$. Then given a dataset $\data = \{\x_n \}_{n=1}^N$ a maximum likelihood estimate of $\mparam$ requires solving the following optimisation problem:
+\begin{equation}
+\mparam^{\text{ML}} = \argmax_{\mparam} \quad \sum_{n=1}^N \{ \log p(\z_0^n) - \sum_{t=1}^T \log | \text{det}(\nabla_{\z_{t-1}^n} \f_t(\z_{t-1}^n)) | \} |_{\z^n_T = \x_n}.
+\end{equation}
+Although now the density $\log p(\x)$ is tractable thanks to the invertible transform rules, for high dimensional observations $\x$ the above optimisation task can still be very challenging. First computing the determinant of the Jacobian $\text{det}(\nabla_{\z_{t-1}^n} \f_t(\z_{t-1}^n))$ normally requires $\mathcal{O}(d^3)$ time if the Jacobian matrix is dense, which can be very expensive for e.g.~image data with hundreds of dimensions. Second, one would typically expect to use more invertible transformations when modelling high dimensional data, indicating that $T$ also increases with $d$. 
+%
+\item Variational inference with normalising flows. \\
+One can also use a normalising flow to construct the approximate posterior distribution
+$$\z_0 \sim q(\z_0), \quad \z_T = \f_{T} \circ \f_{T-1} \circ \cdot \cdot \cdot \circ \f_{1} (\z_0),$$
+and fit the variational parameters $\vparam$ by maximising the variational lower-bound:
+\begin{equation}
+\mathcal{L}_{VI}(q; \x) = \mathbb{E}_{q(\z_T)}[ \log p(\x, \z_T) ] - \mathbb{E}_{q(\z_T)}[\log q(\z_T)].  
+\end{equation}
+The reconstruction term can be easily calculated following the LOTUS rule (see Section \ref{sec:chap2_dgm})
+$$  \mathbb{E}_{q(\z_T)}[ \log p(\x, \z_T) ] =  \mathbb{E}_{q(\z_0)}[ \log p(\x,  \f_{T} \circ \f_{T-1} \circ \cdot \cdot \cdot \circ \f_{1} (\z_0)) ],$$
+however, the second entropy term still involves evaluating the determinant of the Jacobian matrices:
+$$\mathbb{H}[q(\z_T)] = \mathbb{E}_{q(\z_0)} \left[ - \log q(\z_0^n) + \sum_{t=1}^T \log | \text{det}(\nabla_{\z_{t-1}^n} \f_t(\z_{t-1}^n)) | \right],$$
+which, for similar reasons as in the MLE example, can still be very expensive.
+\end{itemize}
+
+Importantly, in both examples, one needs to compute a sequence of Jacobian matrices as a sub-routine of the optimisation procedure. So to make them practical for real-world problems, researchers have designed a number of invertible mappings $\f$ whose Jacobian is diagonal/low-rank/triangular. Then the induced normalising flow distribution allows faster density evaluation that scales almost linearly to the dimension $d$. Some examples include:
+
+\begin{itemize}
+\item Individual/block mapping: \\
+denoting $z_{t}[i]$ as the $i^{\text{th}}$ element of the vector $\z_t$
+$$q(\z_0) = \prod_{i=1}^d q(z_0[i]), \quad z_T[i] = f_{T} \circ f_{T-1} \circ \cdot \cdot \cdot \circ f_{1} (z_0[i]),$$
+and obviously the Jacobian matrix is diagonal, and the determinant can be computed in linear time. This idea can also be generalised to block mappings, which construct invertible transformations on a subset of the random variables. The resulting Jacobian matrix is block-diagonal whose determinant can still be evaluated in a fast way.
+
+\item Linear time invertible transform: \\
+\cite{rezende:flow2015} proposed a linear time invertible mapping as the following
+$$\f(\z) = \z + \bm{u} \sigma( \bm{w}^{\text{T}} \z + b), $$
+where the free parameters are $\bm{u} \in \mathbb{R}^d$, $\bm{\w} \in \mathbb{R}^d$ and $b \in \mathbb{R}$, and $\sigma(\cdot)$ denotes a smooth invertible non-linearity. Then one can evaluate the log-det of the Jacobian in linear time as
+$$\log |\text{det} ( \nabla_{\z} \f(\z)) | = |1 + \bm{u}^{\text{T}} \sigma'(\bm{w}^{\text{T}} \z + b) \bm{w} | .$$
+
+\item NICE and realNVP: introducing coupling mappings. \\
+\cite{dinh:nice2014} introduced an invertible mapping which is composed by transformations with auto-regressive structure. The algorithm starts from splitting the variables into disjoint sets $\z = [\z^1, \z^2]$, $\z^1 \in \mathbb{R}^e$, then define the transform:
+$$ \y = [\y^1, \y^2] = \f(\z) \quad \Leftrightarrow \quad \y^1 = \z^1, \y^2 = \g(\z^2; m(\z^1)),$$
+where $m: \mathbb{R}^{e} \rightarrow \mathbb{R}^c$ (no need to be invertible) and $\g: \mathbb{R}^{d - e + c} \rightarrow \mathbb{R}^{d - e}$ is a ``conditional'' invertible mapping, i.e.~one can compute $\z^2$ given $m(\z^1)$ and $\y^2$. For this mapping the Jacobian matrix and its determinant are
+\begin{equation*}
+\nabla_{\z} \f(\z) = \begin{bmatrix}
+    \mathbf{I}       & \bm{0} \\
+    \nabla_{\z^1} \g  & \nabla_{\z^2} \g
+\end{bmatrix}, \quad 
+|\text{det}( \nabla_{\z} \f(\z)) |_{\y = \f(\z)} = |\text{det} (\nabla_{\z^2} \g ) |_{\z^2 = \g^{-1}(\y^2; m(\y^1))} .
+\end{equation*}
+The authors named this type of mappings as \emph{non-linear independent component estimation} (NICE).
+One can then stack the NICE mappings to construct a deep non-linear transformation, and in particular to allow non-linear behaviour of the output variables, define
+$$ \x = [\x^1, \x^2] = \f_2 (\y) \quad \Leftrightarrow \quad \x^2 = \y^2, \x^1 = \g_2(\y^1; m_2(\y^2)).$$
+In their following work, \cite{dinh:realnvp2017} further extended NICE to \emph{real-valued non-volume preserving flow} (realNVP), by defining
+$$\g(\z^2, m(\z^1)) = \z^2 \odot \exp( s(\z^1) ) + t(\z^1), \quad m(\z^1) = [s(\z^1), t(\z^1)],$$
+and constructing the splitting $\z = [\z^1, \z^2]$ using check-board masks and channel masks.
+
+\item Inverse auto-regressive flow: \\
+\cite{kingma:iaf2016} introduced the \emph{inverse auto-regressive flow} (IAF) which defines the invertible transform as
+$$ \z_t = \text{sigmoid}(\bm{s}_t) \odot \z_{t-1} + (1 - \text{sigmoid}(\bm{s}_t)) \odot \bm{m}_t, \quad [\bm{s}_t, \bm{m}_t] = \text{Auto-regressiveNN}[t](\z_{t-1}). $$
+Here the $\text{Auto-regressiveNN}[t](\z_{t-1})$ is a network acting on the previous random variable $\z_t$, such that the $i^{th}$ element of $\bm{s}_t$ (and $\bm{m}_t$) only depends on $\z_{t-1}[1:(i-1)]$. Therefore, the Jacobian $\nabla_{\z_{t-1}} \bm{s}_t$ (and $\nabla_{\z_{t-1}} \bm{m}_t$) is a lower-triangular matrix with zeros on the diagonal, so that the determinant of the Jacobian $\nabla_{\z_{t-1}} \z_t$ is 
+$$\text{det}(\nabla_{\z_{t-1}} \z_t) = \prod_{i=1}^d \text{sigmoid}(\bm{s}_t)[i] .$$
+\end{itemize}
+
+As a side note, one can also construct \emph{continuous time} normalising flow using stochastic differential equations. Further, one can add auxiliary variables and apply invertible mappings to the augmented space, and then use the marginal distribution of $\z$ as the induced probability density. A prevalent example is the Hamiltonian Monte Carlo (HMC) method \citep{neal:mcmc2011}, which essentially deploys a \emph{deterministic} dynamics in the augmented space of $\{\z, \bm{p} \}$. Importantly this flow (with Leapfrog discretisation) is \emph{volume preserving} in the joint space $(\z, \bm{p})$, i.e. the determinant of the Jacobian is $1$ \citep{neal:mcmc2011}. This idea has also been investigated in \citet{salimans:mcmcvi2015} where the authors discretised the HMC dynamics and learned the HMC parameters with VI. 
+ 

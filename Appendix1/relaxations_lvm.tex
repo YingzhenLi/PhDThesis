@@ -1,0 +1,141 @@
+
+\subsection{Nested variational methods}
+\label{sec:appendix_relaxation_lvm}
+We further provide several EP-like recipes for latent variable models. As we shall see again, different decoupling and constraint relaxation strategies return algorithms that have different global and local behaviour. 
+
+Assume now the exact posterior becomes
+$p(\mparam, \{\bm{z}_n\} | \{ \bm{x}_n \}) \propto p_0(\mparam) \prod_n p_0(\bm{z}_n) p(\bm{x}_n|\bm{z}_n, \mparam).$ We note that the algorithms discussed below also applies to models that has \emph{intermediate-level variables}, i.e.~those latent variables that are attached to a subset of data. The goal is to approximate the exact posterior of both $\mparam$ and $\bm{z}_n$, and we assume a factorised approximation $q(\mparam, \{ \bm{z}_n \} ) = q(\mparam) \prod_n q(\bm{z}_n|\bm{x}_n)$. Note that in VI/VB literature the local variational approximation is often denoted as $q(\bm{z}_n)$. However as at optimum $q(\bm{z}_n)$ depends on $\bm{x}_n$, here we explicitly write down this dependence as $q(\bm{z}_n|\bm{x}_n)$. This notation is also convenient for the application of amortised inference (see Section \ref{sec:chap2_amortisation}) which uses a recognition model (i.e.~sharing parameters between $q(\bm{z}_n)$) to parameterise the local variational distribution.
+
+\subsubsection{Full power EP/BB-$\alpha$ treatment}
+We repeat the term rearranging and argument decoupling procedure as in (\ref{eq:alpha_bethe}). This returns:
+\begin{equation}
+\begin{aligned}
+\mathcal{F}_{\bm{\alpha}}(q, \{ \tilde{p}_n \} ) = \left(1 - \sum_n \frac{1}{\alpha_n} \right) \mathrm{KL}[q(\mparam)||p_0(\mparam)] &+ \sum_n \left( 1 - \frac{1}{\alpha_n} \right) \mathrm{KL}[q(\bm{z}_n|\bm{x}_n)||p_0(\bm{z}_n)] \\
+&- \sum_n \frac{1}{\alpha_n} \mathbb{E}_{\tilde{p}_n} \left[ \log \frac{p_0(\mparam) p_0(\bm{z}_n) p( \bm{x}_n | \bm{z}_n, \mparam)^{\alpha_n}}{ \tilde{p}_n(\mparam, \bm{z}_n) } \right],
+\end{aligned}
+\label{eq:vi_lvm_rearrange}
+\end{equation}
+subject to $\tilde{p}_n(\mparam, \bm{z}_n) = q(\mparam) q(\bm{z}_n | \bm{x}_n), \forall n$.
+%
+The next step is to relax the equality constraint to moment-matching constraints denoted as $\mathbb{E}_{\tilde{p}_n}[\bm{\Phi}(\mparam, \bm{z}_n)] = \mathbb{E}_{q}[\bm{\Phi}(\mparam, \bm{z}_n)]$. The choice of the sufficient statistic $\bm{\Phi}$ also plays an important role here, and for simplicity we omit the dependence to the observations $\bm{x}_n$, and assume a \emph{factorised sufficient statistic}, i.e.~$\bm{\Phi}(\mparam, \bm{z}_n) = [\bm{\Phi}(\mparam), \bm{\psi}(\bm{z}_n)]$. We leave the general case to future work.
+
+Now we proceed to solve the fixed points using similar methods presented in the main text. We still use the KL duality (\ref{eq:kl_duality}) for $q(\mparam)$, and write that for the latent variables as
+\begin{equation}
+ -\mathrm{KL}[q(\bm{z}_n|\bm{x}_n)||p_0(\bm{z}_n)] = \min_{\eta(\bm{z}_n, \bm{x}_n)} - \mathbb{E}_q[\eta(\bm{z}_n, \bm{x}_n)] + \log \mathbb{E}_{p_0} \left[ \exp [\eta(\bm{z}_n, \bm{x}_n)] \right].
+\end{equation}
+To simplify computations we assume $\eta(\bm{z}_n, \bm{x}_n) = \bm{\eta}(\bm{x}_n)^T \bm{\psi}(\bm{z}_n)$ w.l.o.g. Substitution into (\ref{eq:vi_lvm_rearrange}) returns the modified form $\mathcal{F}_{\bm{\alpha}}(q, \{ \tilde{p}_n \}, \bm{\lambda}_q, \{ \bm{\eta}(\bm{x}_n) \} )$ which is defined in a similar way as (\ref{eq:bethe_energy_transformed}). Associating Lagrange multiplier $\bm{\lambda}_{-n}$ and $\bm{\eta}_{n}$ for the moment matching constraints of $\bm{\Phi}$ and $\bm{\psi}$ respectively, we have the following Lagrangian
+\begin{equation}
+\mathcal{F}_{\bm{\alpha}}(q, \{ \tilde{p}_n \}, \bm{\lambda}_q, \{ \bm{\eta}(\bm{x}_n) \} ) + \sum_n \frac{1}{\alpha_n} \left[ \bm{\lambda}_{-n}^{T}(\mathbb{E}_{q}[\bm{\Phi}] - \mathbb{E}_{\tilde{p}_n}[\bm{\Phi}]) + \bm{\eta}_n^{T}( \mathbb{E}_{q}[\bm{\psi}] - \mathbb{E}_{\tilde{p}_n}[\bm{\psi}]) \right] + ... 
+\label{eq:ep_lvm_lagrangian}
+\end{equation}
+where we have omitted the multipliers for the normalisation constraints. Finding the fixed point wrt.~$\tilde{p}_n$ returns the following tilted distribution:
+\begin{equation}
+\tilde{p}_n(\mparam, \bm{z}_n) = \frac{1}{Z_n} p_0(\mparam) p_0(\bm{z}_n) p( \bm{x}_n | \bm{z}_n, \mparam)^{\alpha_n} \exp \left[ \bm{\lambda}_{-n}^T \bm{\Phi}(\mparam) + \bm{\eta}_n^T \bm{\psi}(\bm{z}_n) \right].
+\end{equation}
+Also zeroing the gradient wrt.~$q$ yields the fixed point conditions (up to a constant) 
+$$\left( \sum_n \frac{1}{\alpha_n} - 1 \right) \bm{\lambda}_q = \sum_n \frac{1}{\alpha_n} \bm{\lambda}_{-n},$$
+just like in power EP, and $(1 - \alpha_n) \bm{\eta}(\bm{x}_n) = \bm{\eta}_n$. The second one is similar to the BB-$\alpha$ case so we directly assume it holds and drop the optimisation problem of $\bm{\eta}_n$. Furthermore, substituting $\tilde{p}_n$ back into (\ref{eq:ep_lvm_lagrangian}) and zeroing the gradient wrt.~$q$, we arrive at the following power EP energy
+\begin{equation}
+\begin{aligned}
+(\sum_n \frac{1}{\alpha_n} - 1) \log \int p_0(\mparam) \exp \left[ \bm{\lambda}_q^T \bm{\Phi}(\mparam) \right] d \mparam + \sum_n (\frac{1}{\alpha_n} - 1) \log \int p_0(\bm{z}_n) \exp \left[ \bm{\eta}(\bm{x}_n)^T \bm{\psi}(\bm{z}_n) \right] d \bm{z}_n \\
+- \sum_n \frac{1}{\alpha_n} \log \int p_0(\mparam) p_0(\bm{z}_n) p( \bm{x}_n | \bm{z}_n, \mparam)^{\alpha_n} \exp \left[ \bm{\lambda}_{-n}^T \bm{\Phi}(\mparam) + (1 - \alpha_n) \bm{\eta}(\bm{x}_n)^T \bm{\psi}(\bm{z}_n) \right] d \mparam d \bm{z}_n \\
+\text{subject to } (\sum_n \frac{1}{\alpha_n} - 1) \bm{\lambda}_q = \sum_n \frac{1}{\alpha_n} \bm{\lambda}_{-n}.
+\end{aligned}
+\end{equation}
+To make the KL duality tight we define the approximation $q$ obtained from the dual energy optimisation as
+\begin{equation*}
+q(\mparam) = \frac{1}{Z_q} p_0(\mparam) \exp \left[ \bm{\lambda}_q^T \bm{\Phi}(\mparam) \right], \quad
+q(\bm{z}_n|\bm{x}_n) = \frac{1}{Z_q(\bm{x}_n)} p_0(\bm{z}_n) \exp \left[ \bm{\eta}(\bm{x}_n)^T \bm{\psi}(\bm{z}_n) \right].
+\end{equation*}
+%
+We also present a much cleaner version of the energy function by substituting the $q$ distributions into the power EP energy (with a further definition $\bm{\lambda}_n = \frac{1}{\alpha_n}(\bm{\lambda}_q - \bm{\lambda}_{-n})$) and rearranging terms:
+\begin{equation}
+\begin{aligned}
+- \log \int p_0(\mparam) \exp \left[ \bm{\lambda}_q^T \bm{\Phi}(\mparam) \right] d \mparam
+- \sum_n \frac{1}{\alpha_n} \log \mathbb{E}_{q(\mparam) q(\bm{z}_n|\bm{x}_n)} \left[ \left( \frac{p_0(\bm{z}_n) p( \bm{x}_n | \bm{z}_n, \mparam)}{q(\bm{z}_n|\bm{x}_n) \exp \left[ \bm{\lambda}_{n}^T \bm{\Phi}(\mparam) \right] } \right)^{\alpha_n} \right] \\
+\text{subject to } \bm{\lambda}_q = \sum_n \bm{\lambda}_{n}.
+\end{aligned}
+\label{eq:ep_energy_lvm}
+\end{equation}
+%
+
+The BB-$\alpha$ variant can be derived similarly by further constraint relaxations. The detailed derivation is omitted here, but in summary we keep the constraint for $\bm{\psi}$ but modify the other constraint by $\mathbb{E}_{q(\mparam)}[\bm{\Phi}] = \frac{1}{N} \sum_n \mathbb{E}_{\tilde{p}_n}[\bm{\Phi}]$. One can show that the dual energy becomes (again after rearranging terms)
+\begin{equation}
+- \sum_n \frac{1}{\alpha} \log \mathbb{E}_{ q(\mparam) q(\bm{z}_n|\bm{x}_n) } \left[ \left( \frac{p_0(\mparam)^{\frac{1}{N}} p_0(\bm{z}_n) p( \bm{x}_n | \bm{z}_n, \mparam)}{ q(\mparam)^{\frac{1}{N}} q(\bm{z}_n|\bm{x}_n) } \right)^{\alpha} \right],
+\label{eq:bbalpha_energy_lvm}
+\end{equation}
+with $q(\mparam)$ and $q(\bm{z}_n|\bm{x}_n)$ defined as exponential family distributions. Extensions to general $q$ distributions can be justified using R{\'e}nyi divergences minimisation methods presented in Chapter \ref{chap:vrbound}.
+
+\subsubsection{Nesting power-EP/BB-$\alpha$ in VI}
+\label{sec:vi_pep}
+This section discusses how to use power EP/BB-$\alpha$ as an inner loop computation for variational inference. It starts from (\ref{eq:vi_lvm_rearrange}), but only applies constraint relaxations to the moments for the latent variables. In other words, now the constraints are $\mathbb{E}_{q}[\bm{\psi}(\bm{z}_n)] = \mathbb{E}_{\tilde{p}_n}[\bm{\psi}(\bm{z}_n)]$ and $q(\mparam) = \tilde{p}_n(\mparam)$. For computational convenience we assume $\tilde{p}_n(\mparam, \bm{z}_n) = q(\mparam) \tilde{p}_n(\bm{z}_n|\mparam)$ w.l.o.g.~so that there is only one set of constraints $\mathbb{E}_{q(\bm{z}_n|\bm{x}_n)}[\bm{\psi}(\bm{z}_n)] = \mathbb{E}_{q(\mparam) \tilde{p}_n(\bm{z}_n|\mparam)}[\bm{\psi}(\bm{z}_n)]$ (besides the normalisation ones). Denote $\bm{\eta}_n$ as the associated Lagrange multipliers for the moment maching constraints, then solving the corresponding Lagrangian yields $(1 - \alpha_n) \bm{\eta}(\bm{x}_n) = \bm{\eta}_n$ again, and 
+\begin{equation}
+ \tilde{p}_n(\bm{z}_n|\mparam) = \frac{1}{Z_n(\bm{x}_n, \mparam)} p_0(\bm{z}_n) p(\bm{x}_n|\bm{z}_n, \mparam)^{\alpha_n} \exp \left[ (1 - \alpha_n) \bm{\eta}(\bm{x}_n)^T \bm{\psi}(\bm{z}_n) \right].
+\end{equation}
+Note that now the normalising constant $Z_n(\bm{x}_n, \mparam)$ is also a function of $\mparam$. We still keep the free-form optimisation for $q(\mparam)$. Substitution of $\tilde{p}_n(\bm{z}_n|\mparam)$ into the Lagrangian returns a ``mixed form'' of energy (again after rearranging terms)
+\begin{equation}
+ \min_{q} \mathrm{KL}[q(\mparam) || p_0(\mparam)] - \sum_n \mathbb{E}_{q(\mparam)} \left[ \frac{1}{\alpha_n} \log \mathbb{E}_{q(\bm{z}_n|\bm{x}_n)} \left[ \left( \frac{p_0(\bm{z}_n) p(\bm{x}_n|\bm{z}_n, \mparam)}{q(\bm{z}_n|\bm{x}_n)} \right)^{\alpha_n} \right] \right],
+\end{equation}
+where $q(\bm{z}_n|\bm{x}_n)$ is restricted to have an exponential family form: 
+$$q(\bm{z}_n|\bm{x}_n) \propto p_0(\bm{z}_n) \exp \left[ \bm{\eta}(\bm{x}_n)^T \bm{\psi}(\bm{z}_n) \right].$$ 
+
+\vspace{1em}
+\begin{tcolorbox}
+\textbf{Remark.} A naive modification of the constraints to $\mathbb{E}_{q}[\bm{\Phi}(\mparam)] = \mathbb{E}_{\tilde{p}_n}[\bm{\Phi}(\mparam)]$ and $q(\bm{z}_n|\bm{x}_n) = \tilde{p}_n(\bm{z}_n)$ does \emph{not} lead to a nested approach of VI in power-EP/BB-$\alpha$. We omit the details here, but a try-out for the BB-$\alpha$ variant returns the following energy
+\begin{equation}
+ \min_{q} \sum_n \mathrm{KL}[q(\bm{z}_n|\bm{x}_n) || p_0(\bm{z}_n)] - \sum_n \frac{1}{\alpha} \mathbb{E}_{q(\bm{z}_n|\bm{x}_n)} \log \mathbb{E}_{q(\mparam)} \left[ \left( \frac{p_0(\mparam)^{1/N} p(\bm{x}_n|\bm{z}_n, \mparam)}{q(\mparam)^{1/N}} \right)^{\alpha} \right],
+\end{equation}
+with $q(\mparam)$ also restricted as an exponential family distribution. 
+\end{tcolorbox}
+
+\subsubsection{Nesting VI in power-EP/BB-$\alpha$}
+\label{sec:pep_vi}
+Recall in the beginning we mentioned that the decoupling process plays a crucial role on the dual form of the energy. Now we decouple the variational distributions in a different way:
+\begin{equation}
+\begin{aligned}
+\mathcal{F}_{\bm{\alpha}}(q, \{ \tilde{p}_n \} ) = \left(1 - \sum_n \frac{1}{\alpha_n} \right) & \mathrm{KL}[q(\mparam)||p_0(\mparam)] 
+\\ & - \sum_n \frac{1}{\alpha_n} \mathbb{E}_{\tilde{p}_n(\mparam) q(\bm{z}_n|\bm{x}_n)} \left[ \log \frac{p_0(\mparam) p_0(\bm{z}_n)^{\alpha_n} p( \bm{x}_n | \bm{z}_n, \mparam)^{\alpha_n}}{ \tilde{p}_n(\mparam)q(\bm{z}_n|\bm{x}_n)^{\alpha_n} } \right],
+\end{aligned}
+\end{equation}
+
+In this case we only relax the constraints to $\tilde{p}_n(\mparam)$ to moment matching: $\mathbb{E}_{q}[\bm{\Phi}] = \mathbb{E}_{\tilde{p}_n}[\bm{\Phi}]$.
+%
+We also reuse the derivations in Section \ref{sec:vfe_to_pep} of the main text by noticing now 
+\begin{equation}
+\log f_n(\mparam) = \mathbb{E}_{q(\bm{z}_n|\bm{x}_n)} \left[ \log \frac{p_0(\bm{z}_n) p(\bm{x}_n|\bm{z}_n, \mparam) }{q(\bm{z}_n|\bm{x}_n)} \right],
+\end{equation}
+and thus omit the detailed expression of the energy functions. Readers are referred to (\ref{eq:pep_energy}) in the main text.
+%
+This algorithm (with the power EP variant) returns the same stationary points as VI if the model is conjugate, i.e.~$\log p(\bm{x}_n |\bm{z}_n, \mparam)$ is linear in $\bm{\Phi}(\mparam)$. 
+
+\subsubsection{Variational message passing between tilted distributions}
+Applying similar derivations as in \ref{sec:pep_vi} to the decoupling \ref{eq:vi_lvm_rearrange} returns a slightly different algorithm that applies variational message passing (VMP) \citep{winn:vmp2005} to the tilted distributions.
+%
+Here we also directly enforce the factorisation assumption, i.e.~$\tilde{p}(\mparam, \bm{z}_n) = \tilde{p}_n(\mparam) \tilde{p}_n(\bm{z}_n)$. This returns the same fixed point as with the joint tilted distribution version if we optimise the free energy under equality constraints. However the stationary points differs from those derived above when relaxing the constraint to moment matching. This is because, as $\tilde{p}$ factorises, the fixed point solution of the Lagrangian should contain ``messages'' sent between $\tilde{p}_n(\mparam)$ and $\tilde{p}(\bm{z}_n)$. To be precise, we solve the fixed point of the Lagrangian (\ref{eq:ep_lvm_lagrangian}) (but with factorised $\tilde{p}$). The fixed point conditions for $q$ remain the same, but those for $\tilde{p}$ become
+\begin{equation}
+\tilde{p}_n(\mparam) = \frac{1}{Z_n} p_0(\mparam) \exp \left[ \bm{\lambda}_{-n}^T \bm{\Phi}(\mparam) + \alpha_n \mathbb{E}_{\tilde{p}(\bm{z}_n)}[\log p( \bm{x}_n | \bm{z}_n, \mparam) ] \right],
+\end{equation}
+\begin{equation}
+\tilde{p}_n(\bm{z}_n) = \frac{1}{Z_n(\bm{x}_n)} p_0(\bm{z}_n) \exp \left[ \bm{\eta}_n^T \bm{\psi}(\bm{z}_n) + \alpha_n \mathbb{E}_{\tilde{p}_n(\mparam)}[\log p( \bm{x}_n | \bm{z}_n, \mparam) ] \right].
+\end{equation}
+Substituting these new fixed point equations back to the Lagrangian returns a different dual energy function
+\begin{equation}
+\begin{aligned}
+(\sum_n \frac{1}{\alpha_n} - 1) \log Z_q + \sum_n (\frac{1}{\alpha_n} - 1) \log Z_q(\bm{x}_n) - \sum_n \frac{1}{\alpha_n} \left( \log Z_n + \log Z_n(\bm{x}_n) \right) \\
++ \sum_n \mathbb{E}_{\tilde{p}_n(\mparam) \tilde{p}_n(\bm{z}_n)} \left[ \log p(\bm{x}_n|\bm{z}_n, \mparam) \right] \\
+\text{subject to } (\sum_n \frac{1}{\alpha_n} - 1) \bm{\lambda}_q = \sum_n \frac{1}{\alpha_n} \bm{\lambda}_{-n}.
+\end{aligned}
+\end{equation}
+The BB-$\alpha$ version can also be derived similarly which we omit here. 
+
+In general the above algorithm behaves differently when compared to VMP, since 1) the local messages are computed using the tilted distributions and 2) for non-conjugate models the tilted distributions contain more complex structure compared to $q$.
+%
+In below we provide a fixed point iteration procedure to find the stationary points of the above constrained optimisation problem.
+\begin{itemize}
+    \item[1] Select a datapoint $\bm{x}_n$;
+	\item[2] Compute cavity distribution $q_{-n}(\mparam)$ (either using power EP or BB-$\alpha$);
+	\item[3] Compute cavity distribution $q_{-1}(\bm{z}_n)$ when $\alpha_n \neq 1$, otherwise $q_{-1}(\bm{z}_n) = p_0(\bm{z}_n)$;
+	\item[4] Run VMP/VI on this single datapoint $\bm{x}_n$ with prior terms changed to $q_{-n}(\mparam)$ and $q_{-1}(\bm{z}_n)$. This procedure calculates $\tilde{p}_n(\mparam)$ and $\tilde{p}(\bm{z}_n)$;
+	\item[5] Compute the moment matching update $q_{new}(\mparam) \leftarrow \mathrm{proj}[\tilde{p}_n(\mparam)]$ (similarly for $q(\z_n)$);
+	\item[6] Compute the final update for $q$ with $q_{new}$ (either using power EP or BB-$\alpha$).
+\end{itemize} 

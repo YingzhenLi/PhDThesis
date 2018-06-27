@@ -1,0 +1,31 @@
+\section{Derivations of PBP in Chapter \ref{chap:factor_tying}}
+\label{sec:appendix_pbp}
+
+We briefly describe the approximation techniques used in probabilistic back-propagation (PBP) for training Bayesian neural networks \citep{hernandez-lobato:pbp2015}. In this case the model is the following:
+\begin{equation}
+\centering
+\begin{aligned}
+p(\y_n| \x_n, W, \gamma) = \mathcal{N}(\y_n; \text{NN}_{W}(\x_b), \gamma^{-1}), \quad
+p(W | \lambda) = \prod_{i, j, l} \mathcal{N}(W_{ij}^l; 0, \lambda^{-1}), \\ 
+p(\lambda) = \text{Gamma}(\lambda; \alpha_0^{\lambda}, \beta_0^{\lambda}), \quad p(\gamma) = \text{Gamma}(\gamma; \alpha_0^{\gamma}, \beta_0^{\gamma}),
+\end{aligned}
+\end{equation}
+where $\alpha_0^{\lambda}, \beta_0^{\lambda}, \alpha_0^{\gamma}, \beta_0^{\gamma}$ are prior parameters that are all set to 6.
+%
+We are interested in computing the approximate posterior of the following form:
+\begin{equation}
+q(W, \gamma, \lambda) = \prod_{i, j, l} \mathcal{N}(W_{ij}^l ; \mu_{ij}^l, v_{ij}^l) \text{Gamma}(\lambda; \alpha^{\lambda}, \beta^{\lambda}) \text{Gamma}(\gamma; \alpha^{\gamma}, \beta^{\gamma}),
+\end{equation}
+which is iteratively solved by EP. Since the moments of the random variables can also be obtained by differentiating through the (log) normalising constant of the tilted distribution $\log Z$, PBP first approximately computes the normalising constant by
+\begin{equation}
+\begin{aligned}
+Z &= \int p(\y| \x, W, \gamma) q(W, \gamma, \lambda) dW d\gamma d\lambda \\
+&\approx \int \mathcal{N}(\y ; \z_L, \gamma^{-1}) \mathcal{N}(\z_L | \bm{m}_{L}, \bm{v}_{L}) \text{Gamma}(\gamma; \alpha^{\gamma}, \beta^{\gamma}) d\z_L d\gamma \quad \text{// PBP forward pass} \\
+&= \int \mathcal{T}(\y ; \z_L, \beta^{\gamma} / \alpha^{\gamma}, 2 \alpha^{\gamma}) \mathcal{N}(\z_L | \bm{m}_{L}, \bm{v}_{L}) d\z_L \quad \text{// student-t distribution} \\
+&\approx \mathcal{N}(\y; \bm{m}_{L}, \beta^{\gamma} / (\alpha^{\gamma} - 1) + \bm{v}_L). \quad \text{// Gaussian approx.}
+\end{aligned}
+\end{equation}
+%
+It remains to specify the forward pass of PBP which approximate $\text{NN}_W(\x), W \sim q(W)$ by $\z_L \sim \mathcal{N}(\z_L | \bm{m}_{L}, \bm{v}_{L})$. A short summary of the idea is the following. Assume the inputs $\z_{l-1}$ to the $l^{\text{th}}$ layer are Gaussian distributed: $\z_{l-1} \sim \mathcal{N}(\z_{l-1} | \bm{m}_{l-1}, \bm{v}_{l-1})$, then when the network is wide, due to the central limit theorem the pre-activation $\bm{a}_l = W \z_{l-1} / \sqrt{\text{dim}(\z_{l-1})}$ is approximately Gaussian distributed with mean and variance determined by the means and variances of $\z_{l-1}$ and $W^l$. If the activation function is ReLU, then the distribution of $\z_l$ is a mixture of delta mass $\delta(\z_l = \bm{0})$ and truncated Gaussian at zero. The last step approximates this mixture distribution with a Gaussian distribution that matches the mean and variance, which leads to $\mathcal{N}(\z_l | \bm{m}_l, \bm{v}_l)$ that is used in later forward pass. We refer to \cite{hernandez-lobato:pbp2015} for the detailed derivation of $\bm{m}_l$ and $\bm{v}_l$. 
+
+In the SEP experiments for PBP the update equations are almost the same, except that $Z$ is computed using the cavity distribution $q_{-1}(W, \gamma, \lambda) \propto p(W|\lambda) p(\lambda) p(\gamma) f(W)^{N-1} f(\gamma)^{N-1} f(\lambda)$.

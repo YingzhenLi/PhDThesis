@@ -1,0 +1,18 @@
+\section{Summary}
+We have presented the stochastic expectation propagation (SEP) method for reducing EP's large memory consumption that is prohibitive for large datasets. We have connected the new algorithm to a number of existing methods including assumed density filtering, variational message passing, variational inference, stochastic variational inference and averaged EP.
+%
+Experiments on Bayesian logistic regression (both synthetic and real world) and mixture of Gaussians clustering indicated that the new method had an accuracy that was competitive with EP.  Experiments using the probabilistic back-propagation approach to training Bayesian neural networks on large real world regression datasets again showed that SEP comparably to EP with a vastly reduced memory footprint. 
+%
+
+One notable issue that is not addressed here is the theoretical properties of SEP. Does SEP have the same convergence properties as EP in expectation? What is the underlying energy function that SEP is minimising, or is there one at all? in the next chapter we will propose another unifying view of the existing variational methods, but from a very different angle: we will manipulate the energy functions to obtain both upper- and lower-bounds of the marginal likelihood, and discuss connections to VI and EP/SEP with further techniques. Our hope is that, by studying the energy functions, we can get more insights on how EP-like methods work, and better understand the principles of variational methods.
+
+
+\vspace{1em}
+\begin{tcolorbox}
+\textbf{Remark} (Further applications of SEP/DSEP)\textbf{.}
+The flexibility of the SEP algorithms allow further adjustments of the approximation procedure for different modelling scenarios. For example, we touched on the distributed version of SEP (DSEP) but did not push very far when this work was presented at NIPS 2015. Since then \cite{zhe:yahoo2016} adopted the factor tying idea to develop a highly scalable Bayesian algorithm for online click-through rate prediction on Yahoo! data. In more detail, their idea is DSEP essentially: they maintain the approximating factors for both positive and negative classes, and update them using cheap moment matching techniques. Their experimental results showed that DSEP returns better prediction accuracy compared to widely used algorithms like Vowpal Wabbit\footnote{\url{http://hunch.net/~vw/}} and follow the regularised leader (FTRL)-proximal method \citep{mcmahan:ftrl_proximal2013}.
+
+Another promising direction is the application of SEP algorithms to continual learning \citep{ring:thesis1994, ring:child1997, kirkpatrick:ewc2017}, where information of previous data/task has to be maintained in some way in order to prevent catastrophic forgetting. Indeed the online elastic weight consolidation (EWC) method developed in \cite{schwarz:pc2018} can be viewed as a Laplace approximation version of SEP, which achieves state-of-the-art performance on multiple reinforcement learning tasks.
+%
+Another interesting idea would combine the \emph{coreset} algorithm with DSEP, where observed data-points in/out of the coreset are handled with different approximating factors.
+\end{tcolorbox}

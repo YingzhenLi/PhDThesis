@@ -1,0 +1,25 @@
+%*******************************************************************************
+%*********************************** First Chapter *****************************
+%*******************************************************************************
+
+\chapter{Introduction}  %Title of the First Chapter
+\label{chap:intro}
+
+\input{Chapter1/intro}
+
+\ifpdf
+    \graphicspath{{Chapter1/Figs/Raster/}{Chapter1/Figs/PDF/}{Chapter1/Figs/}}
+\else
+    \graphicspath{{Chapter1/Figs/Vector/}{Chapter1/Figs/}}
+\fi
+
+% A debate between Frequentist and Bayesian
+
+% Approximate inference: why we should care?
+\input{Chapter1/approx}
+
+% The appealing aspects of black-box methods
+\input{Chapter1/blackbox}
+
+% thesis outline
+\input{Chapter1/outline}

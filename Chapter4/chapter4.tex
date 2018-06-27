@@ -1,0 +1,51 @@
+\chapter{R{\'e}nyi Divergence Variational Inference}
+\label{chap:vrbound}
+
+% **************************** Define Graphics Path **************************
+\ifpdf
+    \graphicspath{{Chapter4/Figs/Raster/}{Chapter4/Figs/PDF/}{Chapter4/figs/}}
+\else
+    \graphicspath{{Chapter4/Figs/Vector/}{Chapter4/figs/}}
+\fi
+
+\input{Chapter4/intro}
+
+%\section{R{\'e}nyi divergences for variational inference}
+\label{sec:vrbound_all}
+
+% general idea
+%\input{Chapter4/vrbound/intro}
+\input{Chapter4/vrbound/renyi}
+\input{Chapter4/vrbound/bound}
+\input{Chapter4/vrbound/mean_field}
+\input{Chapter4/vrbound/mcbound}
+\input{Chapter4/vrbound/reparam}
+\input{Chapter4/vrbound/subsampling}
+\input{Chapter4/vrbound/experiments}
+\input{Chapter4/vrbound/conclusion}
+
+%\section{Free-energy construction with decoupling and constraint relaxations}
+%\label{sec:constraint_relaxation_all}
+%\input{Chapter4/constraint/solve_multiplier}
+%\input{Chapter4/constraint/bbalpha}
+%\input{Chapter4/constraint/distributed}
+%\input{Chapter4/constraint/lvm}
+%\input{Chapter4/constraint/sequential}
+%
+%\section{Derivations and proofs}
+%\label{sec:proofs_chap4}
+%\input{Chapter4/proofs/details_vrbound}
+
+\vspace{3em}
+{\Large
+\noindent \hrulefill \hspace{0.2cm} \raisebox{-4pt}[10pt][10pt]{\decofourleft ~  \decosix ~ \decofourright} \hspace{0.1cm} \hrulefill
+\vspace{2em}
+}
+
+This ends the first part of the thesis, which has reviewed existing variational methods (Chapter \ref{chap:background}), and proposed two unifying frameworks for both algorithmic (Chapter \ref{chap:factor_tying}) and optimisation objective (Chapter \ref{chap:vrbound}) aspects. Experiments on Bayesian deep learning tasks also proved the successfulness of our efforts, on pushing variational algorithms towards wider applicability (far beyond conjugate models) and better scalability to ``big data, big models''. I do admit that, however, the lack of theoretically rigorous selection of approximate inference algorithms is one of the imperfections of the analysis presented here. 
+%
+Indeed, a guide on choosing the optimal inference method are needed for practitioners when applying the framework to their applications, which will be one of my research directions in the future.
+
+So far we only studied different optimisation procedures assuming a given approximating distribution family (mean-field Gaussians in the empirical results), which is just one side of the story for approximate inference. The whole picture for this huge subject will never be comprehensive without discussing the other side, i.e.~the construction of $q$ distributions. In the second part of the thesis ``wild approximate inference'', I will revisit the fundamental questions in approximate inference, providing my point of view on the principles of approximate distribution design, and present one of the algorithms I developed during my PhD following these principles.
+
+

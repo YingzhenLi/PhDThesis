@@ -1,0 +1,40 @@
+% model_lda.tex
+%
+% Copyright (C) 2010,2011 Laura Dietz
+% Copyright (C) 2012 Jaakko Luttinen
+%
+% This file may be distributed and/or modified
+%
+% 1. under the LaTeX Project Public License and/or
+% 2. under the GNU General Public License.
+%
+% See the files LICENSE_LPPL and LICENSE_GPL for more details.
+
+% Latent Diriclet allocation model
+
+%\beginpgfgraWcnamed{model-lda}
+\begin{tikzpicture}[x=1.7cm,y=1.8cm]
+
+  % Nodes
+
+  \node[latent]                   (X1) at (0, 0)      {$\bm{x}_1$} ; %
+  \node[latent]    (X2) at (1, 0)     {$\bm{x}_2$} ; %
+  \node[latent]    (X3) at (2, 0)     {$\bm{x}_3$} ; %
+
+
+  % Factors
+  \factor[above=of X1]     {X1-f1}     {above:$f_1$}{}{}%{left:$Q(W, H)$} {} {} ; %
+  \factor[above=of X2]     {X2-f2}     {above:$f_2$}{}{}%{left:$Q(W, H)$} {} {} ; %
+  \factor[above=of X3]     {X3-f3}     {above:$f_3$}{}{}%{left:$Q(W, H)$} {} {} ; %
+
+  \factoredge[-] {X1}   {X1-f1}   {} ; %
+ 	\factoredge[-] {X2}    {X2-f2}	{}
+  \factoredge[-] {X3}    {X3-f3}	{}
+
+\end{tikzpicture}
+%\endpgfgraphicnamed
+
+%%% Local Variables: 
+%%% mode: tex-pdf
+%%% TeX-master: "example"
+%%% End: 

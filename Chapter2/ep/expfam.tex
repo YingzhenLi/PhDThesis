@@ -1,0 +1,28 @@
+\subsubsection{Exponential family distributions}
+Another important concept we introduce here is the \emph{exponential family} distribution \citep{koopman:expfam1936}.
+%
+As a motivating example, consider fitting a probabilistic model $p$ to some empirical distribution $\hat{p}_{\mathcal{D}}$ by matching some statistical quantity $\bm{\Phi}(\mparam)$. There exists infinitely many solutions for this problem, and here we would prefer the solution which has the maximum \emph{entropy} $\mathbb{H}[p] = - \int p(\mparam) \log p(\mparam) d\mparam$. This means the solution produces samples that have the same statistics as the data distribution, but also retains maximal uncertainty (in terms of the entropy). Solving this constrained optimisation algorithm reveals that the optimal fit has an exponential family form as follows.
+%
+\begin{definition}
+(Exponential family)
+An exponential family distribution is defined as 
+\begin{equation}
+p(\mparam) = \frac{1}{Z} h(\mparam) \exp \left[ \bm{\lambda}^{\text{T}} \bm{\Phi} ( \mparam )  \right],
+\label{eq:chap2_vi_expfam}
+\end{equation}
+where $h(\mparam)$ is the base measure, $\bm{\lambda}$ is the natural parameter or canonical parameter, and $\bm{\Phi}(\mparam)$ is the sufficient statistic.
+\end{definition}
+%
+The natural parameter $\bm{\lambda}$ of the maximum entropy solution is selected to satisfy the constraint $\mathbb{E}_p [\bm{\Phi}(\theta)] = \mathbb{E}_{\hat{p}_{\mathcal{D}} } [\bm{\Phi}(\theta)]$. If the exponential family is \emph{regular}, i.e.~the components of $\bm{\Phi}$ are linearly independent, then there exists a one-to-one mapping between the natural parameter and the expectation of the sufficient statistics $\bm{\mu} := \mathbb{E}_{p}[\bm{\Phi}(\mparam)]$. Thus $\bm{\mu}$ is also named \emph{moment parameter} or \emph{mean parameter} of an exponential family distribution. For notational simplicity we also assume the base measure $h(\mparam) = 1$ and the above exponential family is regular. Hence the partition function $Z$ is a function of the natural parameter $\bm{\lambda}$ (and equivalently a function of the moment parameter $\bm{\mu}$ as well) and we will also write $Z = Z(\bm{\lambda}) = Z(\bm{\mu})$ when necessary. 
+
+Here we include some important properties of exponential family distributions \citep{wainwright:graphical2008}, which can be proved by simple calculations.
+\begin{prop}
+\label{prop:chap2_expfam}
+A regular exponential family distribution (\ref{eq:chap2_vi_expfam}) satisfies the following: \\
+(1) $\log Z(\bm{\lambda})$ is convex in $\bm{\lambda}$; \\
+(2) $\bm{\mu} = \nabla_{\bm{\lambda}} \log Z(\bm{\lambda})$, and $\text{Cov}_{p}[\bm{\Phi}] = \nabla \nabla_{\bm{\lambda}} \log Z(\bm{\lambda})$; \\
+(3) The Fenchel dual $(\log Z)^*(\bm{\mu}) = -\mathbb{H}[\bm{\mu}]$, where $\mathbb{H}[\bm{\mu}]$ denotes the entropy of the exponential family distribution (\ref{eq:chap2_vi_expfam}) with moment parameter $\bm{\mu}$.
+\label{prop:chap2_vi_expfam}
+\end{prop}
+%
+The last property is particularly interesting in variational inference context. Recall the Fenchel duality equation $\log Z(\bm{\lambda}) = \max_{\bm{\nu}} \bm{\lambda}^{\text{T}} \bm{\nu} + \mathbb{H}[\bm{\nu}]$, where the maximum is obtained at $\bm{\nu}^* = \bm{\mu}$. This means if the target distribution belongs to some complicated exponential family\footnote{Notice that we can also write the target distribution as $p(\mparam) = \frac{1}{Z} \exp \left[ 1 \cdot \log p^*(\mparam) \right]$. } and the $q$ distribution has moments $\bm{\nu}$, then the Fenchel duality equation is exactly the optimisation problem of VI (\ref{eq:chap2_vfe}). In particular, if $q$ also belongs to the same exponential family, then the optimal approximation can be obtained by matching the moments $\bm{\nu} \leftarrow \bm{\mu}$, thus $q = p$. 

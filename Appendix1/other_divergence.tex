@@ -1,0 +1,66 @@
+\section{Other divergences}
+\label{sec:appendix_other_divergence}
+
+Although not usually used in approximate inference context, in this section we briefly review another two families of divergences, namely $f$-divergences and Bregman divergences. Both of them are very general divergence families: they contain many useful cases, and more interestingly, they have some nice connections to the two KL divergences.
+
+\subsubsection{$f$-divergences}
+The $f$-divergences were introduce by \cite{csiszar:divergence1963}, \cite{morimoto:divergence1963} and \cite{ali:divergence1966}, and are sometimes referred as Csisz{\'a}r's $f$-divergences, Csisz{\'a}r-Morimoto divergences or Ali-Silvey distances. This family of divergences is defined as follows.
+
+\begin{definition}
+($f$-divergence)
+Given a convex function $f: \mathbb{R}^{+} \rightarrow \mathbb{R}$ satisfying $f(1) = 0$, the corresponding $f$-divergence on $\mathcal{P}$ is defined as a function $\mathrm{D}_{f}[\cdot || \cdot]: \mathcal{P} \times \mathcal{P} \rightarrow \mathbb{R}$ with the following form
+\begin{equation}
+\mathrm{D}_{f}[p||q] = \int q(\mparam) f \left( \frac{p(\mparam)}{q(\mparam)} \right) d\mparam, \quad p, q \in \mathcal{P}.
+\label{eq:chap2_f_divergence}
+\end{equation}
+\label{def:chap2_f_divergence}
+\end{definition}
+By taking $f(x) = - \log x$ and $f(x) = x \log x$, in which both are convex in $x$, we recover the two KL divergence $\mathrm{KL}[q||p]$ and $\mathrm{KL}[p||q]$, respectively. The convexity of function $f$ is required by Jensen's inequality in order to prove the conditions of a valid divergence.
+
+Amari's $\alpha$-divergence is a special instance of $f$-divergence, by taking $f(x) = \frac{4}{1 - \alpha^2} (1 - x^{\frac{1 + \alpha}{2}}) - \frac{2}{1 - \alpha} (x - 1)$. But more interestingly, if $f$ is smooth, then one can show with Taylor expansion that the corresponding $f$-divergence can be represented by a series of chi-divergences,  which are essentially special cases of $\alpha$-divergences (up to scaling constant) with integer $\alpha$ values. This means many approximate inference algorithms using $\alpha$-divergence can be adapted to the general $f$-divergence case without major modification, which also justifies the focus of $\alpha$-divergences in this thesis.
+
+\subsubsection{Bregman divergences}
+Bregman divergences were introduced by \cite{bregman:divergence1967} as an important tool for geometry studies. It also use convex functions defined on a convex set $\Omega$. 
+\begin{definition}
+(Bregman divergence)
+Given a strictly convex, and differentiable function $f: \Omega \rightarrow \mathbb{R}$, the corresponding Bregman divergence on $\mathcal{P}$ is defined as a function $\mathrm{B}_{f}[\cdot || \cdot]: \Omega \times \Omega \rightarrow \mathbb{R}$ with the following form
+\begin{equation}
+\mathrm{B}_{f}[r||s] = f(r) - f(s) - \langle \nabla f(s), r - s \rangle_{\Omega}, \quad r, s \in \Omega,
+\label{eq:chap2_bregman_divergence}
+\end{equation}
+where $\langle \cdot, \cdot \rangle_{\Omega}$ denotes the inner product defined on $\Omega$.
+\label{def:chap2_bregman_divergence}
+\end{definition}
+
+Bregman divergences have also been extensively applied to design and analyse algorithms for optimisation. A widely used algorithm called \emph{mirror gradient descent} \citep{nemirovsky:opt1983, beck:mirror_descent2003} can be viewed as solving an optimisation problem using proximal methods with a ``regulariser'' as the Bregman divergence between the current and the proposed locations
+\begin{equation}
+\mparam_{t+1} = \argmin_{\mparam} \quad \{ \langle \mparam, \nabla_{\mparam_t} \mathcal{L}(\mparam_t) \rangle + \frac{1}{\gamma_t} \mathrm{B}_f[\mparam || \mparam_t] \}.
+\end{equation}
+%
+This and related optimisation techniques have recently been incorporated to approximate inference algorithms in order to improve convergence, e.g.~see \citet{dai:pmd2015, khan:kl_proximal2015, altosaar:proximity2017}.
+
+To conclude the review of divergences, we include a theoretical result proved by \cite{amari:divergence2009}, which shows the deep connections between $\alpha$-divergence and the above two families of divergences.
+%
+\begin{prop}
+(\citep{amari:divergence2009}) 
+Amari's $\alpha$-divergence is the unique class of divergence sitting at the intersection of $f$-divergences and Bregman divergences classes.
+\end{prop}
+%
+Seeing why $\alpha$-divergence is a special case of Bregman divergence is slightly involved. In this case $\Omega$ is defined as the set $\Omega = \{ k_{\alpha}(p): p \in \mathcal{P} \}$ with\begin{equation*}
+\begin{aligned}
+k_{\alpha}(p(\mparam)) &= \frac{2}{1 - \alpha} \left( p(\mparam)^{\frac{1 - \alpha}{2}} - 1 \right), \quad \alpha \neq 1 \\
+k_{\alpha}(p(\mparam)) &= \log p(\mparam), \quad \alpha = 1,
+\end{aligned} 
+\end{equation*}
+and the inner product is defined as $\langle g, h \rangle_{\Omega} = \int g(\mparam) h(\mparam) d\mparam$. Then simple calculations show that $D_{\alpha}^A[p||q] = B_{f_{\alpha}}[k_{\alpha}(p) || k_{\alpha}(q)]$ with $f_{\alpha}(g(\mparam)) = \frac{2}{1 + \alpha} \int k_{\alpha}^{-1}(g(\mparam)) d\mparam$. The statement of uniqueness is proved in \citet{amari:divergence2009} which is skipped here.
+
+Perhaps one of the more well-known results compared to the above proposition is the relationship to the KL divergence in exponential family setup. Consider two exponential family distributions $p(\mparam)$, $q(\mparam)$ with sufficient statistic $\bm{\Phi}(\mparam)$ and natural parameters $\bm{\lambda}_p$, $\bm{\lambda}_q$, respectively. Recall the log partition function
+$$ A(\bm{\lambda}) := \log \int \exp[\bm{\lambda}^{\text{T}} \bm{\Phi}(\mparam) ] d\mparam$$
+is convex in $\bm{\lambda}$, and here the inner product is defined as $\langle \x, \y \rangle := \x^{\text{T}} \y$. Then simple calculation reveals that
+\begin{equation}
+\begin{aligned}
+\mathrm{KL}[p || q] &= A(\bm{\lambda}_q) - A(\bm{\lambda}_p) - \langle \bm{\lambda}_q - \bm{\lambda}_p, \mathbb{E}_p[\bm{\Phi}(\mparam)] \rangle \\
+&= A(\bm{\lambda}_q) - A(\bm{\lambda}_p) - \langle \bm{\lambda}_q - \bm{\lambda}_p, \nabla_{\bm{\lambda}_p} A(\bm{\lambda}_p) \rangle \quad \text{// Proposition \ref{prop:chap2_vi_expfam}} \\
+&= \mathrm{B}_{A}[\bm{\lambda}_q || \bm{\lambda}_p].
+\end{aligned}
+\end{equation}

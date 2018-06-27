@@ -1,0 +1,80 @@
+%%%%%%%%%%%%%%
+\subsection{Stochastic approximation for large-scale learning}
+\label{sec:chap4_vrbound_large_scale_learning}
+VR bounds can also be applied to full Bayesian inference with posterior approximation. However for large datasets full batch learning is very inefficient. Mini-batch training is non-trivial here since the VR bound cannot be represented by the expectation of a datapoint-wise loss, except when $\alpha = 1$ (VI). This section introduces two proposals for mini-batch training, and interestingly, this recovers two existing algorithms that were motivated from a different perspective.
+%
+In the following we define the (geometric) ``average likelihood'' $\bar{f}_{\mathcal{D}}(\bm{\theta}) = [\prod_{n=1}^N p(\bm{x}_n|\bm{\theta})]^{\frac{1}{N}}$. Hence the joint distribution can be rewritten as $p(\bm{\theta}, \mathcal{D}) = p_0(\bm{\theta}) \bar{f}_{\mathcal{D}}(\bm{\theta})^N$. Also for a mini-batch of $M$ datapoints $\mathcal{S} = \{\bm{x}_{n_1}, ..., \bm{x}_{n_M} \} \sim \mathcal{D}$, we define the ``subset average likelihood'' $\bar{f}_{\mathcal{S}}(\bm{\theta}) = [\prod_{m=1}^M p(\bm{x}_{n_m}|\bm{\theta})]^{\frac{1}{M}}$.
+
+The first proposal considers \emph{fixed point approximations} with mini-batch sub-sampling. It first derives the fixed point conditions for the variational parameters (e.g.~the natural parameters of $q$) using the exact VR bound (\ref{eq:chap4_vrbound_exact_bound}), then designs an iterative algorithm using those fixed point equations, but with $\bar{f}_{\mathcal{D}}(\bm{\theta})$ replaced by $\bar{f}_{\mathcal{S}}(\bm{\theta})$.
+%
+The second proposal also applies this subset average likelihood approximation idea, but directly to the VR bound (\ref{eq:chap4_vrbound_exact_bound}) (so this approach is named \emph{energy approximation}):
+\begin{equation}
+\label{eq:alpha_vi_approx}
+\tilde{\mathcal{L}}_{\alpha}(q; \mathcal{S}) 
+	= \frac{1}{1 - \alpha} \log \mathbb{E}_{q} \left[ \left( \frac{p_0(\bm{\theta}) \bar{f}_{\mathcal{S}}(\bm{\theta})^N} {q(\bm{\theta})} \right)^{1 - \alpha} \right].
+\end{equation}
+%
+Now we demonstrate with detailed derivations that fixed point approximation returns stochastic EP (SEP, see Chapter \ref{chap:factor_tying}) , and black box alpha (BB-$\alpha$) \citep{hernandez-lobato:bbalpha2016} corresponds to energy approximation. We derive the results in exponential family context, but in general these two principles of stochastic approximation also apply. Note that both methods use Minka's $\alpha$-divergence, and for clear distinction here we use $\beta$ instead to denote the corresponding $\alpha$ values for Minka's definition, and hence the two algorithms are returned respectively by taking $M = 1$ and $\alpha = 1 - \beta/N$.
+
+Precisely, we assume the posterior approximation is defined as $q(\bm{\theta}) = \frac{1}{Z_q} p_0(\bm{\theta}) t(\bm{\theta})^N$.
+Often $t(\bm{\theta})$ is chosen to have an exponential family form $t(\bm{\theta}) \propto \exp \left[ \langle \bm{\lambda}, \bm{\Phi}(\bm{\theta}) \rangle \right]$ with $\bm{\Phi}(\bm{\theta})$ denoting the sufficient statistic. Then picking $\alpha = 1 - \beta/N$, $\beta \neq 0$, we obtain the exact VR bound (by pulling out the normalising constant $Z_q$) as
+\begin{equation}
+\mathcal{L}_{\alpha}(q; \mathcal{D}) = \log Z_q + \frac{N}{\beta} \log \mathbb{E}_{q} \left[ \left( \frac{ \bar{f}_{\mathcal{D}}(\bm{\theta})} {t(\bm{\theta})} \right)^{\beta} \right].
+\label{eq:vr_bound_sa_exact}
+\end{equation}
+
+The first proposal considers deriving the exact fixed point conditions, then approximating them with mini-batch sub-sampling. In our example the exact fixed point condition for the variational parameters $\bm{\lambda}$ is
+\begin{equation}
+\nabla_{\bm{\lambda}} \mathcal{L}_{\alpha}(q; \mathcal{D}) = 0 \quad \Rightarrow \quad \mathbb{E}_{q}[\bm{\Phi}(\bm{\theta})] = \mathbb{E}_{\tilde{p}_{\alpha}}[\bm{\Phi}(\bm{\theta})],
+\end{equation} 
+with the tilted distribution defined as 
+$$\tilde{p}_{\alpha}(\bm{\theta}) \propto q(\bm{\theta})^{\alpha}p_0(\bm{\theta})^{1 - \alpha} \bar{f}_{\mathcal{D}}(\bm{\theta})^{N(1 - \alpha)} \propto p_0(\bm{\theta}) t(\bm{\theta})^{N - \beta} \bar{f}_{\mathcal{D}}(\bm{\theta})^{\beta}.$$ 
+Now given a mini-batch of datapoints $\mathcal{S}$, the moment matching update can be approximated by replacing $\bar{f}_{\mathcal{D}}(\bm{\theta})$ with $\bar{f}_{\mathcal{S}}(\bm{\theta}) = [\prod_{m=1}^M p(\bm{x}_{n_m}|\bm{\theta})]^{\frac{1}{M}}$. More precisely, each iteration we sample a subset of data $\mathcal{S} = \{\bm{x}_{n_1}, ..., \bm{x}_{n_M} \} \sim \mathcal{D}$, and compute the new update for $\bm{\lambda}$ by first computing $\tilde{p}_{\alpha, \mathcal{S}}(\bm{\theta}) \propto p_0(\bm{\theta}) t(\bm{\theta})^{N - \beta} \bar{f}_{\mathcal{S}}(\bm{\theta})^{\beta}$ then taking $\mathbb{E}_{q}[\bm{\Phi}(\bm{\theta})] \leftarrow \mathbb{E}_{\tilde{p}_{\alpha, \mathcal{S}}}[\bm{\Phi}(\bm{\theta})]$. This method returns SEP when $M = 1$, i.e.~in each iteration only one datapoint is sampled to update the approximate posterior. Using larger mini-batch size $M > 1$ returns SDEP (see Section \ref{sec:chap3_sep_dep}) and in this case further approximation might be required to compute the fixed point iterative updates.
+
+%
+The second proposal also applies this subset average likelihood approximation idea, but directly to the VR bound (\ref{eq:vr_bound_sa_exact}), with $\mathbb{E}_{\mathcal{S}}$ denoting the expectation over mini-batch sub-sampling:
+\begin{equation}
+\mathbb{E}_{\mathcal{S}} \left[ \tilde{\mathcal{L}}_{\alpha}(q; \mathcal{S}) \right] = \log Z_q + \frac{N}{\beta} \mathbb{E}_{\mathcal{S}} \left[ \log \mathbb{E}_{q} \left[ \left( \frac{ \bar{f}_{\mathcal{S}}(\bm{\theta})} {t(\bm{\theta})} \right)^{\beta} \right] \right].
+\label{eq:vr_bound_sa_approx}
+\end{equation}
+It recovers the energy function of BB-$\alpha$ when $M=1$. Note that the original BB-$\alpha$ algorithm uses an adapted form of Amari's $\alpha$-divergence, and the $\alpha$ value in the BB-$\alpha$ algorithm corresponds to $\beta$ in our exposition. Now the gradient of this approximated energy function becomes
+\begin{equation}
+\nabla_{\bm{\lambda}} \mathbb{E}_{\mathcal{S}} \left[ \tilde{\mathcal{L}}_{\alpha}(q; \mathcal{S}) \right] = N (\mathbb{E}_{q}[\bm{\Phi}(\bm{\theta})] - \mathbb{E}_{\mathcal{S}} \mathbb{E}_{\tilde{p}_{\alpha, \mathcal{S}}}[\bm{\Phi}(\bm{\theta})]).
+\end{equation}
+%
+We also provide a characterisation of the energy approximation (\ref{eq:vr_bound_sa_approx}) by the following theorem, with a proof presented in Appendix \ref{sec:appendix_proof_chap4}.
+%
+\begin{theorem}
+\label{thm:chap4_vrbound_stochastic_approx}
+If the approximate distribution $q(\bm{\theta})$ is Gaussian $\mathcal{N}(\bm{\mu}, \bm{\Sigma})$, and the likelihood functions has an exponential family form $p(\bm{x}|\bm{\theta}) = \exp [\langle \bm{\theta}, \bm{\Phi}(\bm{x}) \rangle - A(\bm{\theta})]$, then for $\alpha \leq 1$ and $r > 1$ the stochastic approximation is bounded by
+\begin{equation*}
+\mathbb{E}_{\mathcal{S}} [\tilde{\mathcal{L}}_{\alpha}(q; \mathcal{S})] \leq \mathcal{L}_{1 - (1 - \alpha)r}(q; \mathcal{D}) + \frac{N^2(1-\alpha) r}{2(r - 1)}  \mathrm{tr}(\bm{\Sigma} \mathrm{Cov}_{\mathcal{S} \sim \mathcal{D}}( \bar{\bm{\Phi}}_{\mathcal{S}})).
+\end{equation*}
+\end{theorem}
+
+The following corollary is a direct result of Theorem \ref{thm:chap4_vrbound_stochastic_approx} applied to BB-$\alpha$. Note here we follow the convention of BB-$\alpha$ to use $M = 1$ and overload the notation $\alpha = \beta$ and $\mathcal{L}_{BB-\alpha}(q; \mathcal{D}) = \mathbb{E}_{\{  \bm{x}_n\}} \left[ \tilde{\mathcal{L}}_{1 - \alpha/N}(q; \{ \bm{x}_n \}) \right]$.
+\begin{corollary}
+Assume the approximate posterior and the likelihood functions satisfy the assumptions in Theorem \ref{thm:chap4_vrbound_stochastic_approx}, then for $\alpha > 0$ and $r > 1$, the black-box alpha energy function is upper-bounded by
+\begin{equation*}
+\mathcal{L}_{BB-\alpha}(q; \mathcal{D}) \leq \mathcal{L}_{1 - \frac{\alpha r}{N}}(q; \mathcal{D}) + \frac{N \alpha r}{2(r - 1)}  \mathrm{tr}(\bm{\Sigma} \mathrm{Cov}_{\mathcal{D}}(\bm{\Phi})).
+\end{equation*}
+\end{corollary} 
+
+It is interesting that both SEP and BB-$\alpha$ were originally proposed to approximate (power) EP \citep{minka:ep2001, minka:powerep2004}, which usually minimises $\alpha$-divergences \emph{locally}, and considers $M=1$, $\alpha \in [1 - 1/N, 1)$ and exponential family distributions. These approximations were performed by factor tying, which significantly reduces the memory overhead of full EP and makes both SEP and BB-$\alpha$ scalable to large datasets just as is the case for SVI. The new derivation provides a theoretical justification from an energy perspective, and also sheds lights on the connections between \emph{local} and \emph{global} divergence minimisations as depicted in Figure \ref{fig:vr_ep_relationship}. Note that all these methods recover SVI when $\alpha \rightarrow 1$, in which global and local divergence minimisation are equivalent. Also these results suggest again (but from a different perspective) that, recent attempts of distributed posterior approximation (by carving up the dataset into pieces with $M > 1$ \citep{gelman:dep2014, xu:sms2014}) can be extended to both SEP and BB-$\alpha$.
+
+SEP is arguably better justified since it returns the exact posterior if the approximation family $\mathcal{Q}$ is large enough to include the correct solution, just like VI and VR computed on the whole dataset. BB-$\alpha$ might still be biased even in this scenario. However, BB-$\alpha$ is much simpler to implement since the energy function can be optimised with stochastic gradient descent. Indeed BB-$\alpha$ considers the same black-box approach as used for VI, by computing a stochastic estimate of the energy function then using automatic differentiation tools to obtain the gradients. 
+
+%
+%Monte Carlo methods can also be applied to both proposals. For SEP the moment computation can be approximated with MCMC \citep{gelman:dep2014, xu:sms2014}. For BB-$\alpha$ one can show in the same way as to prove Theorem \ref{thm:chap4_vrbound_sampling_bound} that simple MC approximation in expectation lower-bounds the BB-$\alpha$ energy when $\alpha \leq 1$. 
+
+%%%% discussion on MC approximation %%%%
+\subsection{Optimisation issues with $\alpha$-divergences and MC approximations}
+\label{sec:chap4_vrbound_opt_mc}
+
+It is in general an outstanding research question on how to select the divergence measure for a particular machine learning problem. In our case this corresponds to selecting the $\alpha$ value. Also an approximate inference algorithm can be evaluated with different performance measures, and it is generally impossible to find a single $\alpha$ value that returns the best performance on all evaluations. Thus we only present the evaluation in test error and test log-likelihood in the experiments, and use them to select the $\alpha$ values empirically. 
+
+We discuss two conjectures to explain the difficulty of selecting $\alpha$ in the Bayesian neural network experiments presented in later sections. The first conjecture is that zero-forcing algorithms ($\alpha \geq 1$) tend to favour minimising the test error, while mass-covering methods ($\alpha < 1$) tend to improve the test log-likelihood. However zero-forcing methods can fail as they might miss an important mode due to local optima. Similarly mass-covering methods can be pathological if the exact posterior includes modes that are very far away from each other. Furthermore, the form of the posterior will change with the number of observed datapoints $N$, so the ``optimal'' setting of $\alpha$ for a fixed task may change with $N$. 
+
+The second conjecture states that the MC approximation complicates the selection of $\alpha$, since it favours zero-forcing (because of the bias introduced). For example, in order to maximise the quantity of the MC approximation the algorithm need to make $\mathbb{E}[\hat{\mathcal{L}}_{\alpha, K}]$ finite first. However, as shown by Lemma \ref{lemma:chap4_vrbound_alpha_k_non_exist} in Appendix \ref{sec:appendix_proof_chap4}, the MC approximation goes wrong if the support of $q$ is strictly larger than the support of $p$. Hence to avoid this pathology the optimisation procedure will ensure $q = 0$ whenever $p$ is zero. Also in order to avoid missing an important mode we already assumed that $q$ is supported wherever $p$ is supported. Combining with Theorem \ref{thm:chap4_vrbound_sampling_bound}, we conjecture that the MC approximation makes the algorithm more ``VI-like'' compared to the exact case. In other words, when the MC approximation is deployed, the effective $\alpha$ value is closer to $\alpha = 1$ that is the value for VI (which is precisely the case if considering $K = 1$). This means, if there exists $\alpha_{\text{opt}} \neq 1$ for a specific task, in practice one should use $\alpha \leq \alpha_{\text{opt}}$ (for $\alpha_{\text{opt}} < 1$, and should use $\alpha \geq \alpha_{\text{opt}}$ if $\alpha_{\text{opt}} > 1$) when running the MC algorithm. In general one should be very careful when estimating the ratio between distribution with Monte Carlo methods. Also the introduced MC approach usually has higher variance compared to the variational case (and the variance can be as high as importance sampling \citep{bamler:perturbative_bbvi2017}), so further methods like control variate techniques should be applied to reduce the sampling variance.
+
+Still we want to emphasise again that for many problems, minimising an $\alpha$-divergence other than the KL-divergence can be very useful, even when using MC approximations. Approximate EP has been applied to deep Gaussian process regression and has shown to achieve the state-of-the-art results for benchmark datasets \citep{bui:dgp2016}. A recent paper \citep{depeweg:bnn_rl2016} tested BB-$\alpha$ for model-based reinforcement learning with Bayesian neural networks. In their tests using $\alpha = 0.5$ successfully captured the bi-modality and heteroskedasticity in the predictive distribution, while VI failed disastrously.

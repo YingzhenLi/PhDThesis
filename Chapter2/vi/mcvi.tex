@@ -1,0 +1,36 @@
+\subsection{Monte Carlo variational inference}
+\label{sec:chap2_mcvi}
+
+So far we have discussed variational inference algorithms for linear regression. But real world problems are much more complicated. Often, the term $\mathbb{E}_q[\log p^*(\mparam)]$ in the variational free energy lacks an analytical form. A prevalent example of such cases is variational inference for \emph{large-scale data}: here the unnormalised distribution $p^*(\mparam) := p(\mparam, \data)$ is proportional to the product of many likelihood functions, and evaluating $\mathbb{E}_q[\log p(\data | \mparam)]$ requires a pass of the whole dataset, which can be very expensive. On the other hand, insisting on having an analytical form of the entropy term $\mathbb{H}[q]$ (or $\mathrm{KL}[q||p_0]$) would restrict the selection of $q$ distributions to simple distributions like Gaussians. Usually the exact posterior is very complicated, and these simple distributions are expected to be poor approximations to the target distribution. Hence a key challenge here is, can we design a variational algorithm that applies to complex models, and scales to big data?
+
+One solution to the above request is to develop further approximation techniques \emph{specific to the chosen variational approximation}. Indeed in the early days researchers have attempted to do so, e.g.~see \cite{jaakkola:gmm1998, gershman:nonparametric_vi2012}.  However these solutions are applicable only to a handful of special cases, making them impractical in many other interesting scenarios. Instead in this section we will review another approach which can be quickly applied to many cases with little effort.  It has also been referred as a ``black-box'' approach \citep{ranganath:bbvi2014} due to this feature, but in the rest of the thesis we will refer it as Monte Carlo VI (MC-VI). 
+
+To see how the algorithm works, consider approximating the exact posterior distribution $p(\mparam | \mathcal{D}) \propto \prod_n p(\x_n |\mparam) p_0(\mparam)$ by some simpler distribution $q(\mparam)$. Rewriting the variational lower-bound:
+\begin{equation}
+\mathcal{L}_{\text{VI}}(q; p) = \sum_{n=1}^N \mathbb{E}_q [\log p(\x_n | \mparam)] + \mathbb{E}_q[\log p_0(\mparam) - \log q(\mparam) ],
+\end{equation}
+we see that it is the analytical tractability requirement of computing the expectations that restrict the $q$ (and possibly the model $p$) distribution to be of simple form. This constraint can be removed by considering Monte Carlo (MC) approximation to the expectation, which estimates the expectation by, for example
+\begin{equation}
+\mathbb{E}_{q}[\log p(\x_n|\mparam )] \approx \frac{1}{K} \sum_{k=1}^K \log p(\x_n |\mparam^k ), \quad \mparam^k \sim q(\mparam).
+\label{eq:chap2_mc_estimation}
+\end{equation}
+This forms an \emph{unbiased} estimation, and under mild assumptions (detailed in Chapter \ref{chap:vrbound}), the RHS term in (\ref{eq:chap2_mc_estimation}) converges to the exact expectation value as $K \rightarrow +\infty$. The KL-divergence term in the variational lower-bound can also be estimated with Monte Carlo in a similar manner. Also stochastic optimisation techniques can be extended here for scalability. In summary, with this ``black-box'' approach, one can approximate the variational lower-bound as
+\begin{equation}
+\mathcal{L}^{\text{MC}}_{\text{VI}}(q; p) = \frac{N}{|\mathcal{S}|} \sum_{n \in \mathcal{S}} \frac{1}{K} \sum_{k} \log p(\x_n | \mparam^k) + \frac{1}{K} \sum_{k} [\log p_0(\mparam^k) - \log q(\mparam^k) ], \quad \mparam^k \sim q(\mparam),
+\label{eq:chap2_mcvi}
+\end{equation}
+and compute stochastic gradient descent on the MC approximation (\ref{eq:chap2_mcvi}) with mini-batch $\mathcal{S} \sim \mathcal{D}^{|\mathcal{S}|}$.
+
+\vspace{1em}
+\begin{tcolorbox}
+\textbf{Remark} (MC samples for different observations)\textbf{.}
+In the MC approximation (\ref{eq:chap2_mcvi}) we assumed using the same set of samples $\{ \mparam^k \}$ to estimate all the expectation terms. In general we can use different sets of samples to do so, for example, for every datapoint $\x_n \in \mathcal{S}$, we can sample different sets of $\mparam^k$ to estimate the associated reconstruction term $\mathbb{E}_{q}[\log p(\x_n | \mparam)]$. Prevalent examples of this approach include stochastic regularisation techniques (SRTs) such as dropout \citep{srivastava:dropout2014, gal:uncertainty2016}.
+
+\end{tcolorbox}
+
+\vspace{1em}
+\begin{tcolorbox}
+\textbf{Remark} (variance reduction for MC-VI)\textbf{.}
+MC-VI relies on stochastic gradient descent/ascent for optimisation, and the gradient of (\ref{eq:chap2_mcvi}) wrt.~the variational parameters $\vparam$ could have very high variance, especially when the latent variable is discrete. Thus recent work has been focused on variance reduction, often employing a pre-computed quantity correlated with the stochastic gradient as a \emph{control variate} \citep{ross:book2002}. Discussions of these methods are out of the scope of the thesis. Interested readers are pointed to e.g.~\citet{paisley:bbvi2012, mnih:nvil2014, gu:muprop2016} for more details.
+
+\end{tcolorbox}

@@ -1,0 +1,22 @@
+%%%%%%%%%%%%%%%%%%%%
+\section{VR-bound optimisation for discrete distributions}
+
+Although in Chapter \ref{chap:vrbound} we mainly focused on continuous distributions, here we also briefly show that a recent variance reduction technique for discrete distributions, called variational inference with Monte Carlo objectives (VIMCO) \citep{mnih:vimco2016}, can also be applied to the MC approximated VR bounds. This proposal has also been considered in \citet{webb:alpha_vimco2016} and their initial evaluation showed that using R{\'e}nyi divergences provides advantages over the original VIMCO approach. 
+
+Consider the gradient of the MC approximated bound w.r.t.~$\bm{\phi}$, the parameter of the recognition model:
+\begin{equation*}
+\begin{aligned}
+\nabla_{\bm{\phi}} \mathbb{E}_{ \{\bm{h}_k\} }[\hat{\mathcal{L}}_{\alpha, K}(q; \bm{x})] = \sum_{j=1}^K \mathbb{E}_{\{\bm{h}_k\}}\left[ \frac{1}{1 - \alpha} \log \frac{1}{K}\sum_{k=1}^K \left( \frac{p(\bm{h}_k, \bm{x}) }{q(\bm{h}_k|\bm{x})}\right)^{1 - \alpha} \nabla_{\bm{\phi}} \log q(\bm{h}_j|\bm{x}) \right] \\
+-\mathbb{E}_{\{\bm{h}_k\}} \left[ \hat{w}_{\alpha, k} \nabla_{\bm{\phi}} \log q(\bm{h}_k|\bm{x}) \right],
+\end{aligned}
+\end{equation*}
+with $\hat{w}_{\alpha, k} = \left( \frac{p(\bm{h}_k, \bm{x}) }{q(\bm{h}_k|\bm{x})}\right)^{1 - \alpha} / \sum_{k=1}^K \left( \frac{p(\bm{h}_k, \bm{x}) }{q(\bm{h}_k|\bm{x})}\right)^{1 - \alpha}$. Notice that for any function $f(\bm{h}_{k \neq j})$ we have 
+$$\mathbb{E}_{ \{ \bm{h}_k \} } [ f(\bm{h}_{k \neq j}) \nabla_{\bm{\phi}} \log q(\bm{h}_j|\bm{x}) ] = \mathbb{E}_{ \{ \bm{h}_{j \neq k} \} } [ f(\bm{h}_{k \neq j}) \mathbb{E}_{q(\bm{h}_k|\bm{x})}[ \nabla_{\bm{\phi}} \log q(\bm{h}_j|\bm{x})] ] = 0.$$
+This means we can choose some function $f(\bm{h}_{k \neq j})$ that is correlated with the MC estimate to reduce the variance of the stochastic gradient. We follow \cite{mnih:vimco2016} to define
+\begin{equation*}
+\Delta_{-j} := \frac{1}{1 - \alpha} \log \frac{1}{K}\sum_{k=1}^K \left( \frac{p(\bm{h}_k, \bm{x}) }{q(\bm{h}_k|\bm{x})}\right)^{1 - \alpha} - \frac{1}{1 - \alpha} \log \frac{1}{K-1}\sum_{k \neq j} \left( \frac{p(\bm{h}_k, \bm{x}) }{q(\bm{h}_k|\bm{x})}\right)^{1 - \alpha},
+\end{equation*}
+so the gradient w.r.t.~$\bm{\phi}$ can be re-written as
+\begin{equation}
+\nabla_{\bm{\phi}} \mathbb{E}_{ \{\bm{h}_k\} }[\hat{\mathcal{L}}_{\alpha, K}(q; \bm{x})] = \sum_{j=1}^K \mathbb{E}_{\{\bm{h}_k\}}\left[ \Delta_{-j} \log q(\bm{h}_j|\bm{x}) \right] -\mathbb{E}_{\{\bm{h}_k\}} \left[ \hat{w}_{\alpha, k} \nabla_{\bm{\phi}} \log q(\bm{h}_k|\bm{x}) \right].
+\end{equation}

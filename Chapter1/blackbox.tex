@@ -1,0 +1,26 @@
+\section{Questions to be answered for algorithmic design}
+We have just introduced the concept of approximate inference, but in a very vague way. Precisely what does an ``accurate approximation'' look like? In which sense can we claim the designed method is ``computationally easier'' than the exact integration problem?
+%
+In general we need to answer the following questions when developing new variants of approximate inference algorithms:
+
+\begin{itemize}
+	\item[Q1] What is the measure of ``accuracy''? \\
+	It is crucial to define the accuracy measure for the specific tasks that approximate inference is applied to. For example Alice might care about the accuracy in terms of the (approximated) predictive likelihood (\ref{eq:chap1_approx_predictive_distribution}), but instead Bob might want an accurate approximation to the model evidence $\log p(\data)$ for model selection and/or hyper-parameter optimisation. Unfortunately, no approximate inference algorithm can provide satisfactory answers for any possible accuracy measure, hence users are encouraged to think about what they really want from an approximation procedure. In the rest of the thesis we answer this question by considering the (approximate) predictive likelihood, predictive error and the log marginal likelihood $\log p(\mathcal{D})$ ($\log p(\bm{x})$ in latent variable model settings) computed using the obtained approximate posterior. 
+	
+	\item[Q2] Which optimisation procedure/objective function should be used? \\
+	Ideally we should directly minimise the error of approximation according to the choice of accuracy measure. For example, if the answer to Q1 is to obtain an approximate posterior with minimal error measure by a selected divergence, then minimising that divergence is arguably ``the correct thing to do'', and it would return the exact answer if the exact posterior is contained in the candidate distribution set $\mathcal{Q}$. However such a desired measure might be intractable to minimise, and most of the time we are forced to select an alternative, or a \emph{surrogate} energy function due to tractability concerns. Hence Q2 can be rephrased as, given a set of ``tractable'' optimisation methods, how do we choose the best one of them such that an ``accurate'' (as defined in Q1) approximation could be obtained?
+	
+	\item[Q3] What does ``computational efficiency'' mean here? What constraints are present? \\
+	As discussed in Section \ref{sec:chap1_approx_infer}, we resort to approximation because 1) analytical solutions are unavailable and 2) the computational resource is limited to perform numerical integration directly. The latter computational constraints include: 
+	\begin{itemize}
+	\item \emph{low time complexity} required by large-scale inference tasks or online algorithms that needs real-time inference; 
+	\item \emph{low space complexity} that is crucial for the ``big data, big model'' settings (typically the case for deep learning);
+	\item and \emph{algorithmic tractability} that simply requires the objective function/gradients/fixed point equations to be computable in a fast way, as these are sub-routines in the optimisation procedure.
+	\end{itemize}
+	 Another practical concern might be, to what extent the designed algorithm could be incorporated into existing infrastructure, with minimal adjustment. For example, deep learning systems prefer gradient-based methods over fixed-point iterative updates, so that we should arguably prioritise gradient descent when designing approximate inference algorithms for them. These constraints are incorporated to the selection of both the inference algorithm and the approximate distribution family $Q$.
+	
+\end{itemize}
+
+In principle, Q2 and Q3 should be addressed together. For example, new variational objectives are required when the approximate distribution contains mixture components \citep{jaakkola:gmm1998, salimans:mcmcvi2015, tran:vgp2016, ranganath:hvm2016, maaloe:agdm2016}. In other words, the ``tractability'' in Q2 is mainly defined by the answers to Q3. But in many cases people simply select a widely used approximate inference method (e.g. variational inference) which eventually adds the \emph{algorithmic} tractability constraints, and focus more on the design of approximate distributions. One of the main topics studied in this thesis is to remove as many as possible of these algorithmic restrictions, with the hope of enabling very flexible $q$ distributions to be used for better inference results.
+
+

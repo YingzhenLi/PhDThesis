@@ -1,0 +1,37 @@
+\subsection{Mixture and hierarchical densities for posterior approximations}
+
+Besides invertible transformations which ``go deeper'' and construct highly non-linear warppings, another direction for improving posterior approximations is to ``go wider'', i.e.~using mixture densities with many simple components. For example, \cite{jaakkola:gmm1998} had applied a Gaussian mixture density to approximate the intractable exact posterior, and indeed with sufficiently many components, the mixture density can approximate \emph{any} distribution \emph{arbitrarily well}.
+%
+However, their method relies on a further approximation to the variational lower-bound and applies to only a small set of probabilistic models. In the following we present the recent retake on fitting this type of approximate densities, which introduces auxiliary variables/bounds and is compatible with the MC estimation framework.
+
+As a simple example, consider the following mixture density:
+$$q(\z | \x) = \int q(\z | \bm{a}, \x) q(\bm{a} | \x) d \bm{a}.$$
+In the Gaussian mixture density example, $q(\z | \bm{a}, \x)$ is a Gaussian distribution with its mean and variance determined by the \emph{auxiliary variable} $\bm{a}$, and $q(\bm{a} | \x)$ is typically a categorical distribution representing the probability of selecting a component. Substituting this mixture density into the variational lower-bound, we have
+\begin{equation}
+\mathcal{L}_{\text{VI}}(q; \x) = \mathbb{E}_q[\log p(\x, \z)] - \mathbb{E}_q[\log \int q(\z | \bm{a}, \x) q(\bm{a} | \x) d \bm{a} ],
+\label{eq:appendix_vi_lowerbound_mixture}
+\end{equation}
+and computing the entropy term can be very expensive if $q$ contains many, or even infinite number of component. To address this issue, a first attempt by \cite{gershman:nonparametric_vi2012} introduced a further lower-bound to the entropy term, again using the Jensen's inequality:
+%
+\begin{equation}
+\begin{aligned}
+\mathbb{H}[q] &= - \mathbb{E}_q[\log q(\z | \x) ] \\
+& = -\int q(\bm{a} | \x) q(\z | \bm{a}, \x) \log q(\z | \x) d \z d\bm{a} \\
+& \geq -\int q(\bm{a} | \x) \log \left( \int q(\z | \x) q(\z | \bm{a}, \x) d \z \right) d\bm{a} \\
+& = -\int q(\bm{a} | \x) \log \left( \int q(\z | \bm{a}, \x)  q(\z | \bm{a}', \x) q(\bm{a}' | \x) d\bm{a}' d \z \right) d\bm{a}.
+\end{aligned}
+\end{equation}
+According to the fact that the integral of the product of Gaussians is still Gaussian, the integral inside the logarithm can also be expressed as a mixture of Gaussian. However, this does not remove the requirement of evaluating all components thus no computational gains.
+
+An alternative, and more appealing approach, considers adding an auxiliary density $r(\bm{a} | \z, \x)$ for the sake of obtaining a better lower-bound. More precisely, we subtract from the variational lower-bound (\ref{eq:appendix_vi_lowerbound_mixture}) the KL divergence from $q(\bm{a} | \z, \x)$ to $r(\bm{a} | \z, \x)$:
+\begin{equation}
+\mathcal{L}_{\text{VI}}(q; \x) - \mathrm{KL}[q(\bm{a} | \z, \x) || r(\bm{a} | \z, \x)] 
+= \mathbb{E}_{q} \left[ \log \frac{p(\x, \z) r(\bm{a} | \x, \z)}{q(\z | \bm{a}, \x) q(\bm{a} | \x)} \right],
+\end{equation}
+and this auxiliary lower-bound is tight (to the variational lower-bound) iff.~$r(\bm{a} | \z, \x) = q(\bm{a} | \z, \x)$. Therefore we can optimise the auxiliary distribution $r(\bm{a} | \z, \x)$ as well to reduce the bias of the auxiliary bound, which usually leads to improved approximation quality of the $q$ distribution. Furthermore, MC estimation methods is applicable to the auxiliary lower-bound that also returns an unbiased estimator.
+
+The auxiliary lower-bound idea was extensively discussed in \citet{salimans:mcmcvi2015, tran:vgp2016, maaloe:agdm2016, ranganath:hvm2016}, and specifically, \cite{salimans:mcmcvi2015} considered a hierarchy of auxiliary variables, i.e.~$\bm{a} = \{ \bm{a}_1, ..., \bm{a}_L \}$, and
+$$q(\z, \bm{a} | \x) = q(\z | \bm{a}^L, \x) q(\bm{a}^1 | \x) \prod_{l=1}^{L-1} q(\bm{a}^{l+1} | \bm{a}^l, \x).$$
+The corresponding auxiliary distribution is then defined as 
+$$r(\bm{a} | \z, \x) = r(\bm{a}^L | \z, \x) \prod_{l=1}^{L-1} r(\bm{a}^l | \bm{a}^{l+1}, \x).$$
+

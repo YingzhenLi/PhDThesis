@@ -1,0 +1,35 @@
+\section{Variational R{\'e}nyi bound}
+\label{sec:vr_bound}
+Recall from previous section that the family of R{\'e}nyi divergences includes the KL divergence. Perhaps variational free-energy approaches can be generalised to the R{\'e}nyi case? Consider approximating the exact posterior $p(\mparam|\mathcal{D})$ by minimizing R{\'e}nyi's $\alpha$-divergence $\mathrm{D}_{\alpha}^{R}[q(\mparam) || p(\mparam | \mathcal{D})]$ for some selected $\alpha > 0$.
+%
+Now we consider the equivalent optimisation problem 
+$$\max_{q \in \mathcal{Q}} \quad  \log p(\mathcal{D}) - \mathrm{D}_{\alpha}^{R}[q(\mparam) || p(\mparam | \mathcal{D})],$$
+when $\alpha \neq 1$, the objective can be rewritten as
+\begin{equation}
+\begin{aligned}
+\mathcal{L}_{\alpha}(q; \mathcal{D}) := & \log p(\mathcal{D}) - \mathrm{D}_{\alpha}^{R}[q(\mparam) || p(\mparam | \mathcal{D})] \\
+= & \log p(\mathcal{D}) - \frac{1}{\alpha - 1} \log \mathbb{E}_{q} \left[ \left( \frac{q(\mparam) p(\mathcal{D})}{p(\mparam, \mathcal{D})} \right)^{\alpha - 1} \right] \\
+= & \frac{1}{1 - \alpha} \log \mathbb{E}_{q} \left[ \left( \frac{p(\mparam, \mathcal{D})}{q(\mparam)} \right)^{1 - \alpha} \right].
+\end{aligned}
+\label{eq:chap4_vrbound_exact_bound}
+\end{equation}
+%
+We name this new objective the \emph{variational R{\'e}nyi (VR) bound}. Importantly the above definition can be extended to $\alpha \leq 0$, and the following theorem is a direct result of Proposition \ref{prop:renyi_divergence}.
+\begin{theorem}
+\label{thm:chap4_vrbound_alpha_vi}
+The objective $\mathcal{L}_{\alpha}(q; \mathcal{D})$ is \textbf{continuous} and \textbf{non-increasing} on $\alpha \in \{\alpha: |\mathcal{L}_{\alpha}| < +\infty \}$. Especially for all $0 < \alpha_{+} < 1$ and $\alpha_{-} < 0$,
+\begin{equation*}
+\mathcal{L}_{\text{VI}}(q; \mathcal{D}) = \lim_{\alpha \rightarrow 1} \mathcal{L}_{\alpha}(q; \mathcal{D}) 
+ \leq \mathcal{L}_{\alpha_{+}}(q; \mathcal{D}) \leq \mathcal{L}_{0}(q; \mathcal{D}) \leq \mathcal{L}_{\alpha_{-}}(q; \mathcal{D})
+\end{equation*}
+Also $\mathcal{L}_{0}(q; \mathcal{D}) = \log p(\mathcal{D})$ if and only if the support $ \mathrm{supp}(p(\mparam|\mathcal{D})) \subseteq  \mathrm{supp}(q(\mparam)) $.
+\end{theorem}
+%
+Theorem \ref{thm:chap4_vrbound_alpha_vi} indicates that the VR bound can be useful for model selection by sandwiching the marginal likelihood with bounds computed using positive and negative $\alpha$ values, which we leave to future work. In particular $\mathcal{L}_{0} = \log p(\mathcal{D})$ under the mild assumption that $q$ is supported where the exact posterior is supported. This assumption holds for many commonly used distributions, e.g.~Gaussians are supported on the entire space, and in the following we assume that this condition is satisfied. 
+
+\vspace{1em}
+\begin{tcolorbox}
+\textbf{Remark} (on marginal likelihood estimation)\textbf{.}
+Though not fully discussed in this thesis, it is worth highlighting here the importance of robust marginal likelihood estimation, and thus the usefulness of sandwiching estimates (with both a lower- and an upper-bound). \citet{dieng:chi2016} applied the VR upper-bound to a number of real-world tasks. \cite{grosse:bidirectional2015, grosse:bidirectional2016} proposed bi-directional Monte Carlo method that can be viewed as computing the VR bounds with a sequence of proposal distributions, aiming at reducing the mismatch between $q$ and $p$ thus improving the Monte Carlo estimates. \cite{wu:quantitative2017} applied this idea to perform the first attempt of robust predictive log-likelihood estimation for VAEs and generative adversarial networks (GANs) \citep{goodfellow:gan2014}.   
+\end{tcolorbox}
+%

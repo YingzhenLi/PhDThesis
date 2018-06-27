@@ -1,0 +1,83 @@
+Having discussed plenty of background material on divergences and approximate inference algorithms, in this section we turn to specify the probabilistic models that will be studied in the rest of the thesis. Historically, the Bayesian modelling community studied well-understood probabilistic models (conjugate models, generalised linear models, etc). Very recently the research theme of \emph{Bayesian deep learning} has received much increasing interest, where \emph{deep generative models} and \emph{Bayesian neural networks} are mainly studied. Advances in approximate inference sit at the core of Bayesian deep learning research: we will briefly sketch how VI can be used to perform inference and learning in both models. In later chapters we will also develop advanced approximate inference methods, and demonstrate improved performances on Bayesian deep learning tasks.
+
+\subsection{Deep generative models}
+\label{sec:chap2_dgm}
+Generating realistic images, sound and text has always been one of the main themes in AI research. One approach towards this goal that is very popular now is building a \emph{deep generative model} to transform some random noise to desired outputs. Similar to the latent variable model we discussed in Section \ref{sec:chap2_amortisation}, the model starts from a latent variable $\z$ sampled from a prior distribution $p_0(\z)$, and then samples the observations $\x$ from a conditional distribution $p_{\mparam}(\x | \z)$ parameterised by $\mparam$.\footnote{It is possible to have a hierarchy of latent variable models, but here we will stick to the simplest case.} Unlike the linear case discussed before, here deep neural networks are applied to form the the likelihood $p_{\mparam}(\x | \z)$, usually by determining the parameters of the distribution by neural networks taking $\z$ as their input.\footnote{Another case where $p(\x | \z)$ is implicitly defined by neural network transforms will be discussed in the second part of the thesis.} 
+%
+As a concrete example, let us consider the following model:
+\begin{equation*}
+\z_n \sim \mathcal{N}(\z; \bm{0}, \bm{I}), \quad \x_n \sim \mathcal{N}(\x; \bm{\mu}_{\mparam}(\z_n), \text{diag}(\bm{\sigma}^2_{\mparam}(\z_n) ) ),
+\end{equation*}
+where $\bm{\mu}_{\mparam}$ and $\bm{\sigma}_{\mparam}$ are defined by deep neural network transforms of $\z$. With the observed dataset $\data = \{ \x_n \}_{n=1}^N$ in hand, we are interested in finding the most likely configuration of the neural network parameters $\mparam$ by maximum likelihood:
+\begin{equation}
+\max_{\mparam} \sum_{n=1}^N \log p_{\mparam}(\x_n),
+\end{equation} 
+which involves integrating out all the latent variables $\z_n$ out and which is thus analytically intractable. Traditionally, the expectation maximisation (EM) algorithm \citep{dempster:em1977} is used here to train the parameters $\mparam$. But here we deploy another approach which uses the variational lower-bound as a surrogate loss:
+\begin{equation}
+\max_{\mparam, \vparam} \sum_{n=1}^N \mathcal{L}_{\text{VI}}(\vparam, \mparam; \x_n), \quad \mathcal{L}_{\text{VI}}(\vparam, \mparam; \x) = \mathbb{E}_{q_{\vparam}(\z | \x)} \left[ \log \frac{p_{\mparam}(\x, \z)}{q_{\vparam}(\z|\x)} \right].
+\end{equation}
+The amortised variational inference algorithm is deployed (see Section \ref{sec:chap2_amortisation}). 
+
+Here we introduce a neat trick called \emph{reparameterisation} \citep{kingma:vae2014, rezende:vae2014},\footnote{As we shall see this is \emph{not} a new trick, although \cite{kingma:vae2014} and \cite{rezende:vae2014} were the first to apply it in deep generative modelling context.} which, along with MC approximation, makes the variational lower-bound easy to handle. This trick comes from a very simple observation: given a distribution $p(\z)$, if sampling $\z \sim p(\z)$ is equivalent to first sampling a ``noise'' variable $\bm{\epsilon} \sim p(\bm{\epsilon})$ and then computing a mapping $\z = \bm{f}(\bm{\epsilon})$, then the expectation of some function $F(\z)$ under distribution $p(\z)$ can be rewritten as
+$$ \mathbb{E}_{p(\z)} [ F(\z) ] = \mathbb{E}_{p(\bm{\epsilon})} [ F(\bm{f}(\bm{\epsilon})) ]. $$
+%
+This convenient computation is also called the \emph{law of the unconscious statistician} (LOTUS). To see how this trick works in the context of deep generative models, we consider a simple approximate posterior distribution, namely the factorised Gaussian:
+\begin{equation*}
+q_{\vparam}(\z | \x) = \mathcal{N}(\z; \bm{\mu}_{\vparam}(\x), \text{diag}(\bm{\sigma}^2_{\vparam}(\x) ) ).
+\end{equation*}
+Again $\bm{\mu}_{\vparam}$ and $\bm{\sigma}_{\vparam}$ are mappings parameterised by deep neural networks with parameter $\vparam$. One can easily notice that drawing samples from this Gaussian is done by the following procedure
+\begin{equation}
+\z \sim q_{\vparam}(\z|\x) \Leftrightarrow \bm{\epsilon} \sim q(\bm{\epsilon}) = \mathcal{N}(\bm{\epsilon}; \bm{0}, \bm{I}), \z = \bm{\mu}_{\vparam}(\x) + \bm{\sigma}_{\vparam}(\x) \odot \bm{\epsilon},
+\label{eq:chap2_gaussian_reparam}
+\end{equation}
+where $\odot$ denotes element-wise product, and essentially (\ref{eq:chap2_gaussian_reparam}) performs a change-of-variable operation. Usually the two mappings $\bm{\mu}_{\vparam}(\cdot)$ and $\bm{\sigma}_{\vparam}(\cdot)$ are represented by (deep) neural networks (with $\vparam$ the network weight matrices), and in this context the $q$ distribution is also called the \emph{recognition model} or the \emph{inference network}. Following the LOTUS rule, the variational lower-bound can be rewritten as
+\begin{equation}
+\mathcal{L}_{\text{VI}}(\vparam, \mparam; \x) = \mathbb{E}_{q(\bm{\epsilon})} \left[ \log \frac{p_{\mparam}(\x, \bm{\mu}_{\vparam}(\x) + \bm{\sigma}_{\vparam}(\x) \odot \bm{\epsilon})}{q_{\vparam}(\bm{\mu}_{\vparam}(\x) + \bm{\sigma}_{\vparam}(\x) \odot \bm{\epsilon}  |\x)} \right],
+\end{equation}
+and it can be further approximated using simple Monte Carlo (MC):
+\begin{equation}
+\mathcal{L}^{\text{MC}}_{\text{VI}}(\vparam, \mparam; \x) = \frac{1}{K} \sum_{k=1}^K  \log \frac{p_{\mparam}(\x, \bm{\mu}_{\vparam}(\x) + \bm{\sigma}_{\vparam}(\x) \odot \bm{\epsilon}_k)}{q_{\vparam}(\bm{\mu}_{\vparam}(\x) + \bm{\sigma}_{\vparam}(\x) \odot \bm{\epsilon}_k  |\x)}, \quad \bm{\epsilon}_k \sim q(\bm{\epsilon}).
+\label{eq:chap2_vae_objective_mc}
+\end{equation}
+%
+In practice the MC estimate is computed with very few samples, and in the case of drawing only one sample ($K=1$), the resulting algorithm is very similar to training a standard auto-encoder with a noise-injected encoding operation, thus the name \emph{variational auto-encoder} \citep{kingma:vae2014, rezende:vae2014}. Its graphical model is also visualised in Figure \ref{fig:vae_figure}.
+
+\begin{figure}[t]
+\begin{center}
+\begin{tikzpicture}[scale=1, transform shape]
+\node[obs] (x1) {$\x$};
+\node[latent, above=of x1] (z1) {$\z$};
+\node[const, left=of z1] (phi1) {$\vparam$};
+\node[const, right=of z1] (theta1) {$\mparam$};
+\edge [dashed] {phi1} {z1};
+\edge {theta1} {z1};
+\edge {theta1} {x1};
+\draw (x1) edge[out=135,in=225,->,dashed] (z1);
+%\draw (z1) edge[out=315,in=45,->] (x1);
+\edge {z1} {x1};
+\plate [xscale=1.5] {} {(x1)(z1)} {$N$} ;
+\end{tikzpicture}
+\end{center}
+\caption{
+The graphical model of VAE, showing the generative model and the inference network. Dash arrows imply dependencies in the $q$ distribution. Reproduced from \cite{kingma:vae2014}.
+}
+\label{fig:vae_figure}
+\end{figure}
+
+%\vspace{1em}
+%\begin{tcolorbox}
+%\textbf{Remark} (Does the wake-sleep algorithm perform amortised inference?)\textbf{.}
+%Deep learning community also refers the $q(\z | \x)$ distribution as \emph{recognition model/network} or \emph{inference network}. The name ``recognition model" is at least dated back to the development of Helmholtz machine \citep{dayan:helmholtz1995} which is trained using the wake-sleep algorithm \citep{hinton:ws1995}. Similar notions have also been adopted in \citep{morris:recognition2001} in the context of directed graphical models. Interestingly, the wake-sleep method uses exactly the MC-VI objective (\ref{eq:chap2_vae_objective_mc}) to learn the generative model, but optimises the ``recognition weights'' $\vparam$ by minimising $\mathbb{E}_{p_{\mparam}(\x)}[\mathrm{KL}[p_{\mparam}(\z | \x) || q_{\vparam}(\z | \x)]]$. Hence I do \emph{not} reckon the wake-sleep algorithm as performing amortised inference: the $q$ distribution is trained using samples $\x \sim p_{\mparam}(\x)$ rather than those from the training data, meaning that it is difficult to describe the approximation quality of $q$ when evaluated on $\x \sim \data$, and has no guarantee to return a good approximation to $p_{\mparam}(\z | \x)$. 
+%%
+%
+%The above argument is still debatable: indeed $q$ is used to infer the latent variables $\z$ which is then used to train the $p$ model. The lower-bounding property of (\ref{eq:chap2_vae_objective_mc}) is true for \emph{any} $q_{\vparam}(\z | \x)$, so for those who does not care about the quality of the inference network $q$, this is indeed performing ``amortised inference'' in some sense. 
+%%
+%However as explained in Section \ref{sec:chap2_amortisation}, the goal of amortised inference is to \emph{find the global dependency in the approximate posterior distribution returned by a valid approximate inference method}.
+%%
+%Hence by examining this requirement, one can easily see that the wake-sleep algorithm does \emph{not} belong to such class of algorithms.
+%%
+%
+%On the other hand, recent work on improving the wake-sleep algorithm \citep{bornschein:rws2015} proposed an adjusted sleep-step in order to incorporate the observations $\x \sim \data$. This makes the improved algorithm essentially equivalent to the importance weighted auto-encoder (IWAE) algorithm \citep{burda:iwae2016} which is indeed performing amortised inference in my opinion.
+%
+%\end{tcolorbox}
+

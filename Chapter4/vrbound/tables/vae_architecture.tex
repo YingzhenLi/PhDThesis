@@ -1,0 +1,18 @@
+
+\begin{table}[!ht]
+\centering
+\captionof{table}{Network architecture of tested VAE algorithms.}
+\label{tab:vae_arch}
+\begin{tabular}{lccccc}
+\hline
+\bf{Dataset}&$L$&architecture&activation&probability type (p/q)\\
+\hline
+Frey Face&1& d200-d200-s20&softplus&Gaussian/Gaussian\\
+\hline
+Caltech 101& 1&d500-s200&tanh&Bernoulli/Gaussian\\
+\hline
+MNIST \& & 1&d200-d200-s50&tanh&Bernoulli/Gaussian\\
+OMNIGLOT     & 2&d200-d200-s100-d100-d100-s50&tanh&Bernoulli/Gaussian\\
+\hline
+\end{tabular}
+\end{table}

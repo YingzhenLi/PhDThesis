@@ -1,0 +1,21 @@
+
+%%%%%% why VR bound %%%%%%%%
+In this section we try to provide a unified framework from an energy function perspective that encompasses a number of recent advances in variational methods, and we hope our effort could potentially motivate new algorithms in the future. This is done by extending traditional VI to R{\'e}nyi's $\alpha$-divergence \cite{renyi:divergence1961}, a rich family that includes many well-known divergences as special cases. After reviewing useful properties of R{\'e}nyi divergences and the VI framework, we make the following contributions:
+
+\begin{itemize}
+ \item We introduce the \emph{variational R{\'e}nyi bound} (VR) as an extension of VI/VB. We then discuss connections to existing approaches, including VI/VB, VAE, IWAE \cite{burda:iwae2016}, SEP and BB-$\alpha$, thereby showing the richness of this new family of variational methods.
+ %\vspace{-0.03in} 
+ \item We develop an optimisation framework for the VR bound. An analysis of the bias introduced by stochastic approximation is also provided with theoretical guarantees and empirical results.
+ %\vspace{-0.03in} 
+ \item We propose a novel approximate inference algorithm called \emph{VR-max} as a new special case. Evaluations on VAEs and Bayesian neural networks show that this new method is often comparable to, or even better than, a number of the state-of-the-art variational methods.
+\end{itemize}
+
+%%%%%%%%% trend of approximate inference %%%%%%%%%%%
+
+\textbf{Remark.} Recent advances of approximate inference follow three major trends. These developments are rather separated and little work has been done to understand their connections, until this section was presented as a conference paper.
+
+First, scalable methods, e.g.~stochastic variational inference (SVI) \cite{hoffman:svi2013} and stochastic expectation propagation (SEP)/AEP \cite{barthelme:aep2015}, have been developed for datasets comprising millions of datapoints. Recent approaches \cite{broderick:stream2013, gelman:dep2014, xu:sms2014} have also applied variational methods to coordinate parallel updates arising from computations performed on chunks of data.
+
+Second, Monte Carlo methods and black-box inference techniques have been deployed to assist variational methods, e.g.~see \cite{paisley:bbvi2012, salimans:reparam2013, ranganath:bbvi2014, kucukelbir:advi2015} for VI and BB-$\alpha$ for EP. They all proposed ascending the Monte Carlo approximated variational bounds to the log-likelihood using noisy gradients computed with automatic differentiation tools.
+
+Third, tighter variational lower-bounds have been proposed for (approximate) MLE. The importance weighted auto-encoder (IWAE) \cite{burda:iwae2016} improved upon the variational auto-encoder (VAE) \cite{kingma:vae2014, rezende:vae2014} framework, by providing tighter lower-bound approximations to the log-likelihood using importance sampling. 

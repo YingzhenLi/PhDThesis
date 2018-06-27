@@ -1,0 +1,179 @@
+\section{Derivations and experimental details of Chapter \ref{chap:grad_approx}}
+\label{sec:appendix_stein}
+
+\subsection{Parametric Stein gradient estimator: the RBF kernel case}
+
+\subsubsection{Direct minimisation of KSD V-statistic and U-statistic}
+The V-statistic of KSD is the following: given samples $\x^k \sim q, k = 1, ..., K$ and recall $\K_{jl} = \mathcal{K}(\x^j, \x^l)$
+\begin{equation}
+\mathcal{S}_V^2(q, \hat{q}) = \frac{1}{K^2} \sum_{j=1}^K \sum_{l=1}^K \left[ \hat{\g}(\x^j)^{\text{T}} \K_{jl} \hat{\g}(\x^l) + \hat{\g}(\x^j)^{\text{T}} \nabla_{\x^l} \K_{jl} + \nabla_{\x^j} \K_{jl}^{\text{T}} \hat{\g}(\x^l) + \text{Tr}(\nabla_{\x^j, \x^l} \K_{jl} )\right].
+\label{eq:ksd_vstat}
+\end{equation}
+The last term $\nabla_{\x^j, \x^l} \K_{jl}$ will be ignored as it does not depend on the approximation $\hat{\g}$. Using matrix notations defined in the main text, readers can verify that the V-statistic can be computed as
+\begin{equation}
+\mathcal{S}_{V}^2(q, \hat{q}) = \frac{1}{K^2} \text{Tr} (\K \hat{\Grad} \hat{\Grad}^{\text{T}} + 2 \langle \nabla, \K \rangle \hat{\Grad}^{\text{T}} ) + C.
+\end{equation}
+Using the cyclic invariance of matrix trace leads to the desired result in the main text. 
+The U-statistic of KSD removes terms indexed by $j = l$ in (\ref{eq:ksd_vstat}), in which the matrix form is
+\begin{equation}
+\mathcal{S}_{U}^2(q, \hat{q}) = \frac{1}{K(K-1)} \text{Tr} ( (\K - \text{diag}(\K)) \hat{\Grad} \hat{\Grad}^{\text{T}} + 2 (\langle \nabla, \K \rangle - \nabla \text{diag}(\K) ) \hat{\Grad}^{\text{T}} ) + C.
+\end{equation}
+with the $j$th row of $\nabla \text{diag}(\K)$ defined as $\nabla_{\x^j} \mathcal{K}(\x^j, \x^j)$. For most translation invariant kernels this extra term $\nabla \text{diag}(\K) = \bm{0}$, thus the optimal solution of $\hat{\Grad}$ by minimising KSD U-statistic is 
+\begin{equation}
+\hat{\Grad}_U^{\text{Stein}} = -( \K - \text{diag}(\K) + \eta \bm{I} )^{-1} \langle \nabla, \K \rangle.
+\end{equation}
+
+\subsubsection{Parametric Stein estimator with RBF kernel}
+We define a parametric approximation in a similar way as for the score matching estimator:
+\begin{equation}
+\log \hat{q}(\x) := \sum_{k=1}^K a_k \mathcal{K}(\x, \x^k) + C, \quad \mathcal{K}(\x, \x') = \exp \left[-\frac{1}{2\sigma^2} ||\x - \x' ||_2^2  \right].
+\end{equation}
+Now we show the optimal solution of $\bm{a} = (a_1, ..., a_K)^{\text{T}}$ by minimising (\ref{eq:ksd_vstat}). 
+To simplify derivations we assume the approximation and KSD use the same kernel. First note that the gradient of the RBF kernel is
+\begin{equation}
+\nabla_{\x} \mathcal{K}(\x, \x') = \frac{1}{\sigma^2} \mathcal{K}(\x, \x') (\x' - \x).
+\label{eq:rbf_kernel_gradient}
+\end{equation}
+%
+Substituting (\ref{eq:rbf_kernel_gradient}) into (\ref{eq:ksd_vstat}):
+\begin{equation*}
+\mathcal{S}_{V}^2(q, \hat{q}) = C + \clubsuit + 2 \spadesuit,
+\end{equation*}
+\begin{equation*}
+\clubsuit = \frac{1}{K^2} \sum_{k=1}^K \sum_{k'=1}^K \sum_{j=1}^K \sum_{l=1}^K a_k a_{k'} \K_{kj} \K_{jl} \K_{lk'} \frac{1}{\sigma^4} (\x^k - \x^j)^{\text{T}}(\x^{k'} - \x^l),
+\end{equation*}
+\begin{equation*}
+\spadesuit = \frac{1}{K^2} \sum_{k=1}^K \sum_{j=1}^K \sum_{l=1}^K a_k \K_{kj} \K_{jl} \frac{1}{\sigma^4} (\x^k - \x^j)^{\text{T}} (\x^j - \x^l).
+\end{equation*}
+We first consider summing the $j$, $l$ indices in $\clubsuit$. Recall the ``gram matrix'' $\Xb_{ij} = (\x^i)^{\text{T}} \x^j$, the inner product term in $\clubsuit$ can be expressed as $\Xb_{kk'} + \Xb_{jl} - \Xb_{kl} - \Xb_{jk'}$. Thus the summation over $j$, $l$ can be re-written as
+\begin{equation*}
+\begin{aligned}
+\bm{\Lambda} :=& \sum_{j=1}^K \sum_{l=1}^K \K_{kj} \K_{jl} \K_{lk'} (\Xb_{kk'} + \Xb_{jl} - \Xb_{kl} - \Xb_{jk'}) \\
+=& \  \Xb \odot (\K \K \K) + \K (\K \odot \Xb) \K - ((\K\K) \odot \Xb) \K - \K ((\K\K) \odot \Xb).
+\end{aligned}
+\end{equation*}
+And thus $\clubsuit = \frac{1}{\sigma^4} \bm{a}^{\text{T}} \bm{\Lambda} \bm{a}$. Similarly the summation over $j$, $l$ in $\spadesuit$ can be simplified into
+\begin{equation*}
+\begin{aligned}
+-\bm{b} :=& \sum_{j=1}^K \sum_{l=1}^K \K_{kj} \K_{jl} (\Xb_{kj} + \Xb_{jl} - \Xb_{kl} - \Xb_{jj} )  \\
+=& \ -( \K \text{diag}(\mathbb{X}) \K + (\K \K) \odot \mathbb{X} - \K (\K \odot \mathbb{X}) - (\K \odot \mathbb{X}) \K ) \bm{1},
+\end{aligned}
+\end{equation*}
+which leads to $\spadesuit = -\frac{1}{\sigma^4} \bm{a}^{\text{T}} \bm{b}$. Thus minimising $\mathcal{S}_{V}^2(q, \hat{q})$ plus an $l_2$ regulariser returns the Stein estimator $\bm{a}_V^{\text{Stein}}$ in the main text.
+
+Similarly we can derive the solution for KSD U-statistic minimisation. The U statistic can also be represented in quadratic form $\mathcal{S}_{U}^2(q, \hat{q}) = C + \tilde{\clubsuit} + 2 \tilde{\spadesuit}$, with $\tilde{\spadesuit} = \spadesuit$ and 
+$$\tilde{\clubsuit} = \clubsuit -  \frac{1}{K^2} \sum_{k=1}^K \sum_{k'=1}^K \sum_{j=1}^K a_k a_{k'} \K_{kj} \K_{jj} \K_{jk'} \frac{1}{\sigma^4} (\Xb_{kk'} + \Xb_{jj} - \Xb_{kj} - \Xb_{jk'}).$$
+Summing over the $j$ indices for the second term, we have
+\begin{equation*}
+\begin{aligned}
+& \sum_{j=1}^K \K_{kj} \K_{jj} \K_{jk'} (\Xb_{kk'} + \Xb_{jj} - \Xb_{kj} - \Xb_{jk'}) \\
+=& \  \Xb \odot (\K \text{diag}(\K) \K) + \K \text{diag}(\K \odot \Xb) \K - ((\K \text{diag}(\K)) \odot \Xb) \K - \K ((\text{diag}(\K)\K) \odot \Xb).
+\end{aligned}
+\end{equation*}
+Working through the analogous derivations reveals that $\hat{\bm{a}}_U^{\text{Stein}} = (\tilde{\bm{\Lambda}} + \eta \mathbf{I})^{-1} \bm{b}$, with
+\begin{equation*}
+\begin{aligned}
+\tilde{\bm{\Lambda}} =& \mathbb{X} \odot (\K (\K - \text{diag}(\K)) \K) + \K ( (\K \odot \mathbb{X}) - \text{diag}(\K \odot \mathbb{X}) ) \K \\
+&\ - ((\K (\K - \text{diag}(\K))) \odot \mathbb{X}) \K - \K (( (\K - \text{diag}(\K)) \K) \odot \mathbb{X}).
+\end{aligned}
+\end{equation*}
+
+\subsection{Score matching estimator: the Epanechnikov kernel case}
+In this section we provide analytical solutions for the score matching estimator (more specifically the linear coefficient $\bm{a} = (a_1, ..., a_K)$) for the case of the Epanechnikov kernel. The solution for the RBF kernel case is referred to \citet{strathmann:kmc2015}.
+
+The Epanechnikov kernel is defined as $\mathcal{K}(\x, \x') = \frac{1}{d} \sum_{i=1}^d (1 - (x_i - x'_i)^2)$, where the first and second order gradients w.r.t.~$x_i$ is
+\begin{equation*}
+\nabla_{x_i} \mathcal{K}(\x, \x') = \frac{2}{d}(x'_i - x_i), \quad \nabla_{x_i} \nabla_{x_i} \mathcal{K}(\x, \x') = -\frac{2}{d}.
+\end{equation*}
+Thus the score matching objective with $\log \hat{q}(\x) = \sum_{k=1}^K a_k \mathcal{K}(\x, \x^k) + C$ is reduced to
+\begin{equation*}
+\begin{aligned}
+\mathcal{F}(\bm{a}) &= \frac{1}{K} \sum_{j=1}^K \left[ ||\sum_{k=1}^K a_k \frac{2}{d}(\x^k - \x^j) ||_2^2 - 2 \sum_{k=1}^K a_k \frac{2}{d} d \right] \\
+&= \frac{4}{K} \sum_{j=1}^K \left[ \frac{1}{d^2} \sum_{k=1}^K \sum_{k'=1}^K a_k a_{k'} (\x^k - \x^j)^{\text{T}}(\x^{k'} - \x^j) - \bm{a}^{\text{T}} \bm{1} \right] \\
+&:= 4 (\bm{a}^{\text{T}} \bm{\Sigma} \bm{a} - \bm{a}^{\text{T}} \bm{1}),
+\end{aligned}
+\end{equation*}
+with the matrix elements
+$$\bm{\Sigma}_{kk'} = \frac{1}{d^2} \left[ (\x^{k})^{\text{T}} \x^{k'} + \frac{1}{K} \sum_{j=1}^K \left( || \x^j ||_2^2 - (\x^k + \x^{k'})^{\text{T}} \x^j \right) \right]. $$
+Define the ``gram matrix'' $\Xb_{ij} = (\x^i)^{\text{T}} \x^j$, we write the matrix form of $\bm{\Sigma}$ as
+$$\bm{\Sigma} = \frac{1}{d^2} \left[ \Xb + \frac{1}{K} \left( \text{Tr}(\Xb) - 2 \Xb \bm{1} \bm{1}^{\text{T}} \right) \right].$$
+Thus with an $l_2$ regulariser, the fitted coefficients are
+$$ \hat{\bm{a}}^{\text{score}} = \frac{d^2}{2} \left[ \Xb + \frac{1}{K} \left( \text{Tr}(\Xb) - 2 \Xb \bm{1} \bm{1}^{\text{T}} \right) + \eta \mathbf{I} \right]^{-1} \bm{1}.$$
+
+\subsection{Score matching estimator: the Cauchy kernel case}
+The Cauchy kernel is defined as $\mathcal{K}(\x, \x') = \left(1 + \frac{|| \x - \x' ||_2^2}{2 \sigma^2} \right)^{-1}$, where the first and second order gradients w.r.t.~$x_i$ is
+\begin{equation*}
+\begin{aligned}
+\nabla_{x_i} \mathcal{K}(\x, \x') &= \frac{1}{\sigma^2} \mathcal{K}(\x, \x')^2 (x'_i - x_i), \\ 
+\nabla_{x_i} \nabla_{x_i} \mathcal{K}(\x, \x') &= -\frac{1}{\sigma^2} \mathcal{K}(\x, \x')^2 + \frac{2}{\sigma^4} \mathcal{K}(\x, \x')^3 (x'_i - x_i)^2.
+\end{aligned}
+\end{equation*}
+We separate the score matching objective in two parts and handle each of them in the following. Writing $\K^{\mathbbm{2}} := \K \odot \K$, we have
+
+\begin{equation*}
+\begin{aligned}
+\sum_{j=1}^K || \g(\x^j) ||_2^2 &= \frac{1}{\sigma^4} \sum_{j=1}^K \left( \sum_{k=1}^K a_k \mathcal{K}(\x^k, \x^j)^2 (\x^k - \x^j) \right)^{\text{T}} \left( \sum_{k'=1}^K a_{k'} \mathcal{K}(\x^{k'}, \x^j)^2 (\x^{k'} - \x^j) \right) \\
+&= \frac{1}{\sigma^4} \sum_{k, k'} a_k a_{k'} \sum_{j=1}^K \K^2_{jk} \K^2_{jk'} (\x^k - \x^j)^{\text{T}} (\x^{k'} - \x^j) \\
+&= \frac{1}{\sigma^4} \sum_{k, k'} a_k a_{k'} \sum_{j=1}^K \K^2_{jk} \K^2_{jk'} (\mathbb{X}_{kk'} + \mathbb{X}_{jj} - \mathbb{X}_{jk} - \mathbb{X}_{jk'}) \\
+&= \frac{1}{\sigma^4} \bm{a}^{\text{T}} \left[ \K^{\mathbbm{2}} \K^{\mathbbm{2}} \odot \mathbb{X} + \K^{\mathbbm{2}} \text{diag}(\mathbb{X}) \K^{\mathbbm{2}} - (\K^{\mathbbm{2}} \odot \mathbb{X}) \K^{\mathbbm{2}} - \K^{\mathbbm{2}} (\K^{\mathbbm{2}} \odot \mathbb{X}) \right] \bm{a}
+\end{aligned}
+\end{equation*}
+%
+\begin{equation*}
+\begin{aligned}
+2 \sum_{j=1}^K \langle \nabla, \g(\x^j) \rangle &= \frac{2}{\sigma^2} \sum_{j=1}^K \sum_{k=1}^K a_k \left( - d \mathcal{K}(\x^k, \x^j)^2 + 2 \mathcal{K}(\x^k, \x^j)^3 \frac{ ||\x^k - \x^j ||_2^2 }{\sigma^2} \right) \\
+&= \frac{2}{\sigma^2} \sum_{j=1}^K \sum_{k=1}^K a_k \left( - d \K_{jk}^2 + 4 \K_{jk}^3 (\K_{jk}^{-1} - 1) \right) \\
+&= \frac{2}{\sigma^2} \sum_{k=1}^K a_k \sum_{j=1}^K \K_{jk}^2 (4 - d - 4 \K_{jk}) \\
+&= -\frac{2}{\sigma^2} \bm{a}^{\text{T}} \left[ \K^{\mathbbm{2}} \odot (4 \K + (d - 4)\mathbf{I}) \right] \bm{1}
+\end{aligned}
+\end{equation*}
+
+Therefore the optimal coefficient for the Cauchy kernel case is $\hat{\bm{a}}^{\text{score}} = (\bm{\Lambda} + \eta \mathbf{I})^{-1} \bm{b}$, with
+\begin{equation*}
+\begin{aligned}
+\bm{\Lambda} &= \K^{\mathbbm{2}} \K^{\mathbbm{2}} \odot \mathbb{X} + \K^{\mathbbm{2}} \text{diag}(\mathbb{X}) \K^{\mathbbm{2}} - (\K^{\mathbbm{2}} \odot \mathbb{X}) \K^{\mathbbm{2}} - \K^{\mathbbm{2}} (\K^{\mathbbm{2}} \odot \mathbb{X}), \\
+\bm{b} &= \sigma^2 \K^{\mathbbm{2}} \odot (4 \K + (d - 4)\mathbf{I}).
+\end{aligned}
+\end{equation*}
+
+\subsection{Parametric Stein gradient estimator with the Cauchy kernel}
+The derivation for the parametric Stein gradient estimator with the Cauchy kernel is very similar with that for the RBF kernel:
+\begin{equation*}
+\mathcal{S}_{V}^2(q, \hat{q}) = C + \diamondsuit + 2 \heartsuit,
+\end{equation*}
+\begin{equation*}
+\diamondsuit = \frac{1}{K^2} \sum_{k=1}^K \sum_{k'=1}^K \sum_{j=1}^K \sum_{l=1}^K a_k a_{k'} \K_{kj}^2 \K_{jl} \K_{lk'}^2 \frac{1}{\sigma^4} (\x^k - \x^j)^{\text{T}}(\x^{k'} - \x^l),
+\end{equation*}
+\begin{equation*}
+\heartsuit = \frac{1}{K^2} \sum_{k=1}^K \sum_{j=1}^K \sum_{l=1}^K a_k \K_{kj}^2 \K_{jl}^2 \frac{1}{\sigma^4} (\x^k - \x^j)^{\text{T}} (\x^j - \x^l).
+\end{equation*}
+Similar rearrangement as in the RBF kernel case returns $\diamondsuit = \frac{1}{\sigma^4} \bm{a}^{\text{T}} \bm{\Lambda} \bm{a}$ and $\heartsuit = -\frac{1}{\sigma^4} \bm{a}^{\text{T}} \bm{b}$, with
+\begin{equation*}
+\begin{aligned}
+\bm{\Lambda} &= \Xb \odot (\K^{\mathbbm{2}} \K \K^{\mathbbm{2}}) + \K^{\mathbbm{2}} (\K \odot \Xb) \K^{\mathbbm{2}} - ((\K^{\mathbbm{2}} \K) \odot \Xb) \K^{\mathbbm{2}} - \K^{\mathbbm{2}} ((\K \K^{\mathbbm{2}} ) \odot \Xb), \\
+\bm{b} &= ( \K^{\mathbbm{2}} \text{diag}(\mathbb{X}) \K^{\mathbbm{2}} + (\K^{\mathbbm{2}} \K^{\mathbbm{2}}) \odot \mathbb{X} - \K^{\mathbbm{2}} (\K^{\mathbbm{2}} \odot \mathbb{X}) - (\K^{\mathbbm{2}} \odot \mathbb{X}) \K^{\mathbbm{2}} ) \bm{1},
+\end{aligned}
+\end{equation*}
+which leads to the solution $\hat{\bm{a}}^{\text{Stein}}_V = (\bm{\Lambda} + \eta \mathbf{I})^{-1} \bm{b}$.
+
+\subsection{Experimental detals}
+
+\subsubsection{Neural network based sampler experiment}
+For the training task, we use a one hidden layer neural network with 20 hidden units to compute the noise variance and the moving direction of the next update. In a nutshell it takes the $i$th coordinate of the current position and the gradient $\mparam_t(i), \nabla_t(i)$ as the inputs, and output the corresponding coordinate of the moving direction $\Delta_{\vparam}(\mparam_t, \nabla_t)(i)$ and the noise variance $\bm{\sigma}_{\vparam}(\mparam_t, \nabla_t)(i)$. Softplus non-linearity is used for the hidden layer and to compute the noise variance we apply ReLU activation to ensure non-negativity. The step-size $\zeta$ is selected as $10^{-5}$ which is tuned on the KDE approach. For SGLD step-size $10^{-5}$ also returns overall good results.
+
+The training process is the following. For each iteration, we simulate the approximate sampler for $T=10$ transitions and sum over the variational lower-bounds computed on the samples of every step. Concretely, the maximisation objective is an MC estimate of
+$$\mathcal{L}(\vparam) = \sum_{t=1}^T \mathcal{L}_{\text{VI}}(q_t),$$
+where $q_t(\mparam)$ is implicitly defined by the marginal distribution of $\mparam_t$ that is dependent on $\vparam$ and $q_0(\mparam_0)$. 
+%
+The simulated samples at time $T$ are stored to initialise the Markov chain for the next iteration, i.e. $q_0(\mparam_0) = \frac{1}{K} \sum_{k=1}^K \delta(\mparam_0 = \mparam_T^k)$ with $\mparam_T^k$ obtained from the last iteration. For every 50 iterations we restart the simulation by randomly sampling the locations from the prior, meaning that $q_0(\mparam_0) = p(\mparam_0)$ at this iteration. 
+%
+The MAP baseline considers an alternative objective function by removing the $\log q_t(\mparam_t)$ term from the above MC-VI objective.
+%
+Early stopping is applied using the validation dataset, and the learning rate is set to 0.001, the number of epochs is set to 500.
+
+We perform hyper-parameter search for the kernel, i.e.~a grid search on the bandwidth $\sigma^2 \in \{0.25, 1.0, 4.0, 10.0, \text{median trick} \}$ and $\eta \in \{0.01, 0.1, 0.5, 1.0, 2.0\}$. We found the median heuristic is sufficient for the KDE and Stein approaches. However, we failed to obtain desirable results using the score matching estimator with median heuristics, and for other settings the score matching approach underperforms when compared to KDE and Stein methods.
+
+
+\subsubsection{Entropy-regularised BEGAN experiments}
+%
+In the experiment, we construct a deconvolutional net for the generator and a convolutional auto-encoder for the discriminator. The convolutional encoder consists of 3 convolutional layers with filter width 3, stride 2, and number of feature maps [32, 64, 64]. These convolutional layers are followed by two fully connected layers with [512, 64] units. The decoder and the generative net have a symmetric architecture but with stride convolutions replaced by deconvolutions. ReLU activation function is used for all layers except the last layer of the generator, which uses sigmoid non-linearity. The reconstruction loss in use is the squared $\ell_2$ norm $|| \cdot ||_2^2$. The randomness $p_0(\z)$ is selected as uniform distribution in [-1, 1] as suggested in the original paper \citep{berthelot:began2017}. The mini-batch size is set to $K = 100$. Learning rate is initialised at 0.0002 and decayed by 0.9 every 10 epochs, which is tuned on the KDE model. The selected $\gamma$ and $\alpha$ values are: for KDE estimator approach $\gamma = 0.3, \alpha \gamma = 0.05$, for score matching estimator approach $\gamma = 0.3, \alpha \gamma = 0.1$, and for Stein approach $\gamma = 0.5$ and $\alpha \gamma = 0.3$. The presented results use the KDE plug-in estimator for the entropy estimates (used to tune $\beta$) for the KDE and score matching approaches. Initial experiments found that for the Stein approach, using the KDE entropy estimator works slightly worse than the proxy loss, thus we report results using the proxy loss. An advantage of using the proxy loss is that it directly relates to the approximate gradient. Furthermore we empirically observe that the performance of the Stein approach is much more robust to the selection of $\gamma$ and $\alpha$ when compared to the other two methods. 

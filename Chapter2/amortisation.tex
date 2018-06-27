@@ -1,0 +1,40 @@
+\subsection{Amortised inference}
+\label{sec:chap2_amortisation}
+So far we have demonstrated how to apply VI to approximate the posterior distribution. However it can still be very slow for running VI on a probabilistic model with lots of unobserved variables, which is typically the case for \emph{latent variable models} -- probabilistic models that have unobserved variables attached to each data instance. For example, a well-known probabilistic model for text data -- latent Dirichlet allocation (LDA) \citep{blei:lda2003}, could involve millions of latent variables when applied to a large corpus. Thus it brings in prohibitive computational burden since each latent variable must have its approximate posterior iteratively refined. Furthermore, for models whose hyper-parameters are updated constantly, the inference procedure is also repeatedly required as a sub-routine. These issues had restricted the extensions of VI to many interesting cases, until the introduction of \emph{amortised inference} that is detailed in below.
+
+Let us start from the mean-field approximation example we had in Section \ref{sec:chap2_mean_field_vi} but with a slightly different set-up. In this case we are interested in learning a latent variable model 
+\begin{equation*}
+\z_n \sim \mathcal{N}(\z; \bm{\mu}, \bm{\Lambda}^{-1}), \quad y_n | \x_n \sim \mathcal{N}(\y; \z_n^T \x_n, \sigma^2).
+\end{equation*}
+which is closely related to factor analysis \citep{harman:factor_analysis1976, roweis:linear1999}. In this case the model parameters $\mparam = \{ \bm{\mu}, \bm{\Lambda}, \sigma \}$ are to be learned by approximate maximum likelihood or variational EM, where the variational lower-bound is used as the surrogate loss. In this case we assume for each latent variable $\z_n \in \mathbb{R}^D$ we compute a mean-field approximate posterior $q_n(\z_n) = \prod_{i=1}^D q_n(z_{ni})$, in which we define each factorisation as $q_n(z_{ni}) = \mathcal{N}(z_{ni}; m_{ni}, \lambda_{ni}^{-1})$. 
+
+One strategy to learn these $q$ distributions is to do gradient descent w.r.t.~all the variational parameters $\{ m_{ni}, \lambda_{ni} \}$ until reaching a local optimum. However this approach is inefficient for large-scale data. First, variational parameters must then be maintained for every observed input-output pairs $( \x_n, y_n )$, meaning a space complexity of $\mathcal{O}(ND)$ if $N$ is the total number of observations. Furthermore, when the model parameters are updated, the previously optimal variational parameters are no longer optimal thus requiring loops of gradient descent again. Depending on the changes of the model parameters, the previous optimal solution for the variational parameters might not always be a good initialisation for the current round's optimisation.
+
+Fortunately, observe that in Section \ref{sec:chap2_mean_field_vi} we have the optimal solutions satisfying
+\begin{equation*}
+\lambda_{ni} = \bm{\Lambda}_{ii} + \frac{1}{\sigma^2} x_{ni}^2, \quad \bm{m}_n = (\bm{\Lambda} + \frac{1}{\sigma^2} \x_n \x_n^T )^{-1} (\bm{\Lambda} \bm{\mu} + \frac{1}{\sigma^2} y_n \x_n),
+\end{equation*}
+meaning that these optimal variational parameters are functions of the observations $\x_n$ and $y_n$. Hence if we explicitly define the variational parameters as a function of the observations, e.g.~by parameterising $\lambda_{ni} = a_i x_{ni}^{2} + b_i$, and optimise the parameters of these mappings (in our example $a_i$ and $b_i$), then we can drastically reduce the memory cost to $\mathcal{O}(D)$ which is scalable to big data. Furthermore the previous round's solution of $a_i, b_i$ is more likely to be a good initialiser for the current round's optimisation, as the ``local structure'' of $q$ (in our example the quadratic term $x_{ni}^2$) is already encoded in the mapping. In general we will explicitly define the approximate posterior as $q(\z_n | \x_n, y_n)$ to emphasise the dependency on the observations, and only parameterise the ``global structure'' that is shared across all $q$ distributions. 
+
+The above method is termed as \emph{amortised inference} for VI \citep{salimans:reparam2013, kingma:vae2014, rezende:vae2014}, which is:
+\begin{itemize}
+\item memory efficient, as we only learn the shared information across the approximate posterior distributions for different $(\x_n, y_n, \z_n)$ tuples;
+\item faster for training, as the previous round's solution is more likely to initialise the current step well; 
+\item generalisable to unseen observations, as the learned variational parameters only capture the global structure of the variational approximation;
+\item a good initialisation of $q$ for unseen data, which will then be refined\footnote{Usually amortised inference returns suboptimal approximation to each individual $p(\z_n | \x_n, y_n)$, -- see \citet{cremer:suboptimal2018} for a quantitative analysis -- so refinements upon the amortised distribution are often useful.} by e.g.~VI \citep{marino:vi2018, kim:semi2018} or MCMC \citep{stuhlmuller:inverse2013, hoffman:vae_mcmc2017}.
+\end{itemize}
+Obviously it also has disadvantages: as the ``global structure'' is typically unknown to the user, a careless design of such amortisation would return distributions with restrictive representation power. One might suggest using neural networks in a way that leads to very flexible $q$ distributions, however the computation of the (MC approximation of the) variational lower-bound requires $\log q(\mparam)$ to be tractable, which is again a very restrictive constraint. Indeed currently neural networks are mostly used to parameterise simple distributions (for example the mean and variance of a Gaussian $q$ distribution), or distributions that are carefully designed using invertible transform \citep{rezende:flow2015, kingma:iaf2016}. Solutions for these problems are further discussed in the second part of the thesis.
+
+\vspace{1em}
+\begin{tcolorbox}
+\textbf{Remark} (a misconception of amortised inference)\textbf{.}
+Amortised inference is sometimes misunderstood as being equivalent to the variational auto-encoder \citep{kingma:vae2014, rezende:vae2014} approach (discussed later) due to the huge popularity of the latter. In fact the general idea goes far beyond: amortisation can be applied to \emph{any} inference technique as long as the optimal solution for it can be described by a mapping from the observed data. 
+%
+Historically, amortised inference was first developed for non-Bayesian inference schemes. \cite{hinton:ws1995} developed the \emph{wake-sleep} algorithm to train the \emph{Helmholtz machine} \citep{dayan:helmholtz1995}, where the sleep step trains the $q(\z | \x)$ distribution using samples from the model, i.e.~$\z, \x \sim p(\z, \x)$. They also refer $q(\z | \x)$ as the ``recognition model''. \cite{morris:recognition2001} further applied the sleep step update to learn an approximation to the conditional distributions of a directed graphical model. We note that in both cases, there is no guarantee that $q$ approximate the exact posterior well as it never observes real-world data in the sleep step. 
+%
+In Gaussian process (GP) literature, amortised inference has been applied to GP latent variable models (GPLVMs) to infer the latent variables, under the name ``back constraints'' \citep{lawrence:gp_back_constraint2006}. 
+%
+Recent progress on amortising (approximate) Bayesian inference includes applications to MAP inference \citep{sonderby:mapsr2016}, importance sampling \citep{burda:iwae2016}, sequential Monte Carlo \citep{paige:smc2016, le:aesmc2017, maddison:fivo2017, naesseth:vsmc2017} and MCMC \citep{li:amcmc2017}. 
+
+\end{tcolorbox}
+

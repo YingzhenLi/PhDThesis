@@ -1,0 +1,19 @@
+This section reviews another important class of approximate inference algorithms: expectation propagation (EP)\citep{minka:ep2001, opper:ec2005}. EP can be viewed as a generalisation of the well-known sum-product algorithm and belief propagation \citep{pearl:bp1982, pearl:book1988} for computing marginal distributions of a probabilistic (graphical) model. Also by generalising EP to minimising alpha-divergences, a broad class of approximate inference algorithms -- including variational inference -- is recovered. 
+%
+Many topics detailed below can also be founded in \citet{wainwright:graphical2008, koller:pgm2009}.
+
+
+\subsection{Factor graphs and exponential families}
+
+One way to represent a distribution is to draw a \emph{factor graph} \citep{kschischang:fg1998, kschischang:fg2001}. A simple example would be a joint distribution $P(\bm{x}_1, \bm{x}_2, \bm{x}_3)$ which can be factorised into $P(\bm{x}_1, \bm{x}_2, \bm{x}_3) = f_1(\bm{x}_1) f_2(\bm{x}_2) f_3(\bm{x}_3)$, illustrated in Figure \ref{fig:factor_graph}. To give a formal definition, a factor graph is a bipartite graph between variable nodes (circles) and factor nodes (squares), where a factor node $f$ is connected to a variable node $\bm{x}_i$ iff.~$\bm{x}_i$ belongs to the function $f$'s domain. A distribution may be represented by different factor graphs, since we can merge factors to a single one. In particular to our example, we may also write $P(\bm{x}_1, \bm{x}_2, \bm{x}_3) = f'_1(\bm{x}_1) f'_2(\bm{x}_2, \bm{x}_3)$, where $f'_1(\bm{x}_1) = f_1(\bm{x}_1)$ and $f'_2(\bm{x}_2, \bm{x}_3) = f_2(\bm{x}_2) f_3(\bm{x}_3)$. Factor graphs enable fast marginal computations using the sum-product algorithm, and in later sections we will see that the EP update procedure also depends on the factor graph structure directly. Therefore, factor graphs can also be viewed as ``hyper-parameters'' specified by the user, and selecting the appropriate factorisation is key to both the approximation accuracy and the computational efficiency. For simplicity in the rest of this chapter we assume the selected factorisation suits well for the learning method. To reduce notation clutter we use $\bm{x}_a$ to denote a subset of random variables $\{\bm{x}_i\}$ connected to a factor node $f_a$.
+
+\begin{figure}
+\centering
+\subfigure[$P(\bm{x}_1, \bm{x}_2, \bm{x}_3) \propto f_1(\bm{x}_1) f_2(\bm{x}_2) f_3(\bm{x}_3)$]{
+  \input{Chapter2/ep/fg1}}
+\hspace{1.0in}%
+\subfigure[$P(\bm{x}_1, \bm{x}_2, \bm{x}_3) \propto f'_1(\bm{x}_1) f'_2(\bm{x}_2, \bm{x}_3)$]{
+  \input{Chapter2/ep/fg2}}
+\caption{Two different factor graph representations for the same probability distribution, if defining $f'_1 = f_1$, $f'_2 = f_2 f_3$.}
+  \label{fig:factor_graph} %% label for entire figure 
+\end{figure} 

@@ -1,0 +1,59 @@
+\section{A battle between VI and EP: which I should prefer?}
+
+We have presented VI and EP as two main classes of approximate inference methods. Newcomers to this subject might be unsure about which algorithm they should use for their task. Inspired by the comparison table on the Infer.NET \citep{microsoft:infernet2014} user guide webpage,\footnote{\url{http://infernet.azurewebsites.net/docs/working\%20with\%20different\%20inference\%20algorithms.aspx}} here I put in Table \ref{tab:chap2_compare} a comparison between VI and EP, with discussions in the following. We note here again that VI is a special case of power EP by setting the power $\alpha=0$ (which is also referred to the variational message passing (VMP) algorithm \citep{winn:vmp2005, minka:divergence2005} that uses fixed-point iterative updates to optimise the variational lower-bound), and all the comparisons below are on VI versus power-EP with other $\alpha$ values. 
+
+\begin{itemize}
+\item Global versus local approximations. \\
+%
+As explained, VI constructs a \emph{global} approximation $q(\mparam) \approx p(\mparam|\data)$ while EP exploits the structure of the posterior distribution and proposes approximations to each of the factors instead (thus we call it \emph{local}). Interesting observations apply for VMP: like local approximation methods, it also propagates messages between factors and store approximations locally; like global approximation methods, however, any stationary point of the VMP algorithm is also a stationary point of the variational lower-bound, no matter which factor graph structure is in use. Conversely, EP returns different approximation results when executed on different factor graph representations of the target distribution. Due to this reason we still call VMP a \emph{global} approximation method, even when it also performs local computations.
+
+\item Zero-forcing versus mass-covering behaviour. \\
+VI exhibits zero-forcing behaviour exactly because it minimises the exclusive KL-divergence (see discussions in Section \ref{sec:chap2_kl_divergence}). For power EP the story is complicated: it can prefer mass-covering when having large $\alpha > 0$ values, but it can also be zero-forcing if, though not very often, negative $\alpha$ values are in use.
+
+\item Convergence guarantee. \\
+VI and VMP are guaranteed to converge, mainly because the variational lower-bound is upper-bounded. EP, like belief propagation on graphs, has no convergence guarantees in general, although practices suggest that it often converges to a local optimum.
+
+\item Running time/speed. \\
+VI with gradient descent often takes many iterations to converge, though each gradient step can be very cheap. EP, on the other hand, takes less iterations to run, but typically requires more time to compute the moment matching step. This is especially the case when there is no closed form solution for the moments, where an additional approximate inference procedure (e.g. MCMC) will be called as a sub-routine, which can be very expensive. VMP combines the advantages from both sides, often being the fastest method to find a local optimum.
+
+\item Accuracy. \\
+Assume both EP and VI use the same family of approximate distributions $\mathcal{Q}$. It is well known that variational free-energy approaches are biased and often severely so \citep{turner:two_problems2011}. Because of the zero-forcing behaviour, VI can be over-confident and miss important modes/correlation structure in the exact posterior. This often results in worse performance when calibrated uncertainty is required. EP is often more accurate when compared to VI, in some cases it can even be exact (e.g.~with a tree-structure graph containing simple factors like Gaussians). However EP can diverge on certain cases and in this case one might prefer VI to at least obtain a reasonable approximation.
+
+\item Approximate posterior design. \\
+VI with Monte Carlo methods allows the deployment of more complex approximate posterior distributions (e.g.~those parameterised by a neural network which will be introduced later). On the other hand, many applications of EP still use exponential family distributions (mainly Gaussians) until the development of Chapter \ref{chap:vrbound}.
+
+\item Hyper-parameter optimisation and model selection. \\
+One might want to optimise the hyper-parameters of the model, or perform model selection to choose the best model. Both cases require a reliable approximation to $\log p(\data)$. In this regard, VI provides a conservative (although possibly strongly biased) estimate of the marginal likelihood, which provides a safe option for approximate MLE. But EP's energy function can be hard to optimise: unless a fixed point is obtained, in theory the EP energy can be arbitrarily far from the exact marginal likelihood \citep{cunningham:gaussianEP2011}.\footnote{Although some empirical results suggest that it is possible to perform hyper-parameter optimisation at the same time as EP runs \citep{hernandez-lobato:gp2016}.} Even if EP converges, the corresponding energy function is not protected: it is neither an upper- nor a lower-bound to the model evidence.
+
+\end{itemize}
+
+Unfortunately I cannot provide a general case verdict for the two classes of algorithms, just like the folklore no-free lunch theorem \citep{wolpert:no_free_lunch1997} states ``there exists no machine learning algorithm that dominates the others in all cases''. To conclude the discussion, here comes two suggestions that have been validated by many results in the literature. Care should be taken for EP when the factor graph is densely connected and contains many loops. Also one should avoid using VI to approximate a non-smooth target density with a smooth $q$ distribution, because the zero-forcing behaviour of VI may push the approximate posterior towards undesirable solutions like delta mass. This happens, in binary classification for example, when the likelihood function is a Heaviside function or a very sharp sigmoid function. 
+
+\begin{table}[t]
+  \centering
+  \caption{Comparing VI/VMP and power EP.}
+  \renewcommand{\arraystretch}{1.2}
+  \label{tab:chap2_compare}
+  \begin{tabular}{ccc}
+  	\toprule
+      & VI/VMP & power EP ($\alpha \neq 0$)\\
+    \hline
+    %
+    global or local? & \begin{tabular}{@{}c@{}} global \\ (same for VMP)  \end{tabular} &
+    \begin{tabular}{@{}c@{}} local \\ (depends on the factor graph) \end{tabular}\\
+    \hline
+    behaviour & \begin{tabular}{@{}c@{}} zero-forcing \\  \end{tabular} &
+    \begin{tabular}{@{}c@{}} zero-forcing/mass-covering \\ (depends on $\alpha$) \end{tabular}\\
+    \hline
+    \begin{tabular}{@{}c@{}} optimisation \\ procedure \end{tabular}  & \begin{tabular}{@{}c@{}} gradient descent (generic VI) \\ fixed-point iterative updates (VMP) \end{tabular} &
+    \begin{tabular}{@{}c@{}} fixed-point iterative updates \\  \end{tabular}\\
+    \hline
+    convergence & \begin{tabular}{@{}c@{}} yes \\ (theoretical guarantee)  \end{tabular} &
+    \begin{tabular}{@{}c@{}} yes (empirically) \\ (with log-concave potentials) \end{tabular}\\
+    \hline
+    accuracy & \begin{tabular}{@{}c@{}} often less accurate \\ (under-estimates uncertainty) \end{tabular} &
+    \begin{tabular}{@{}c@{}} often more accurate \\ (depends on the factor graph) \end{tabular} \\
+    \bottomrule
+  \end{tabular}
+  %\vspace{-0.1in}
+\end{table}

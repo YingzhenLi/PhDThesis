@@ -1,0 +1,7 @@
+\section{Summary and outlook}
+
+In this chapter we have established the idea of divergence minimisation, and reviewed two classes of commonly used approximate inference techniques: variational inference (VI) and expectation propagation (EP). These two methods are closely related to each other but also have notable differences, both algorithmically and in terms of the solutions they return. In the rest of the first part (chapters \ref{chap:factor_tying} and \ref{chap:vrbound}), we will study in depth these similarities and differences, and as a motivation for the detailed analysis we provide a brief discussion as follows.
+
+First, compared to VI, EP brings more serious computational burden, in that its memory cost scales linearly with the number of factors in the graph representing the target density. Scalable approximations to EP are then discussed in Chapter \ref{chap:factor_tying}, in which we demonstrate the scalability of our proposals to machine learning tasks in which EP is too expensive to handle.
+
+Second, both methods can be motivated by divergence minimisation, in which VI minimises the exclusive KL divergence and EP minimises an inclusive KL divergence. The generalisation, i.e.~power EP, minimises alpha-divergences which have the two KL divergences as special cases. However, VI performs \emph{global} divergence minimisation, while EP minimises the selected divergence \emph{locally}. The resulting differences in local optima and optimisation behaviour are further investigated in Chapter \ref{chap:vrbound}.

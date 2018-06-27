@@ -1,0 +1,51 @@
+Many approximate inference algorithms measure the approximation quality by considering the ``closeness'' between the target and the approximation. In this thesis, we will mainly focus on the case where both the target and the approximation are expressed by probability distributions. Then the concept of ``closeness'' is established as \emph{divergence}. Before introducing the formal definition, we briefly discuss the definition of the \emph{probability density function} (PDF)\footnote{For discrete case we refer PDF as probability \emph{mass} functions (PMF).} as preparation. 
+
+Denote the measurable space as $(\Theta, \Sigma)$, where $\Theta$ is the sample space of the random variable $\mparam$ of interest, and $\Sigma$ is a pre-defined $\sigma$-algebra on $\Theta$. A \emph{probability distribution} $P$ is a measure defined on $\Sigma$ such that $P(\Theta) = 1$. Also we assume there exists a dominating measure (also called reference measure) $\mu$ on $\Sigma$ such that, for a probability distribution $P$ in interest which is defined on $\Sigma$, we can define its \emph{probability density function} $p$ by $dP = pd\mu$.\footnote{We can also define divergences without assuming a common reference measure, which is out of the scope of this thesis. In this case one should work with equalities up to zero measure.}
+%
+For simplicity in the rest of the thesis we will work with the sample space $\Theta = \mathbb{R}^D$, the $\sigma$-algebra $\Sigma = \{ S: S \subset \mathbb{R}^D \}$, and the dominating measure $d\mu = d\mparam$. Finally we write $\mathcal{P}$ the space of PDFs such that any probability distribution $P$ defined on $\Sigma$ has its PDF $p \in \mathcal{P}$.
+
+With all the preparation above we now provide a formal definition of divergence.
+\begin{definition}
+(Divergence)
+Given a set of probability density functions $\mathcal{P}$ for a random variable $\mparam$, a divergence on $\mathcal{P}$ is defined as a function $\mathrm{D}[\cdot || \cdot]: \mathcal{P} \times \mathcal{P} \rightarrow \mathbb{R}$ such that $\mathcal{D}[p||q] \geq 0$ for all $p, q \in \mathcal{P}$, and $\mathcal{D}[p||q] = 0$ iff.~$p = q$. 
+\end{definition}
+%
+This definition is much weaker than that for a \emph{distance} such as the $l_2$-norm, since it does not need to satisfy either symmetry in arguments or the triangle inequality. Hence there exist many available divergences to use, and in this section we review some of the popular choices. We start from the well-known Kullback-Leibler (KL) divergence and discuss its properties and applications. Then we move to a more general case and review $\alpha$-divergences which will be the main divergence tools for the algorithms developed in the first part of the thesis. In Appendix \ref{sec:appendix_other_divergence} we also briefly touch on two very general cases, $f$-divergence and Bregman divergence, and discuss their connections to $\alpha$-divergences.
+
+\subsection{Kullback-Leibler (KL) divergence}
+\label{sec:chap2_kl_divergence}
+\emph{Kullback-Leibler divergence} \citep{kullback:divergence1951, kullback:information1959}, or \emph{KL divergence}, is arguably one of the most widely used divergence measures, not only in approximate inference but also in machine learning, statistics, and information theory. 
+%
+\begin{definition}
+(Kullback-Leibler Divergence)
+The Kullback-Leibler (KL) divergence on $\mathcal{P}$ is defined as a function $\mathrm{KL}[\cdot || \cdot]: \mathcal{P} \times \mathcal{P} \rightarrow \mathbb{R}$ with the following form
+\begin{equation}
+\mathrm{KL}[p||q] = \int p(\mparam) \log \frac{p(\mparam)}{q(\mparam)} d\mparam, \quad p, q \in \mathcal{P},
+\label{eq:chap2_kl_divergence}
+\end{equation}
+where $\log$ is the natural logarithm (to base $e$).
+\label{def:chap2_kl_divergence}
+\end{definition}
+One can easily check that indeed the above definition is a valid divergence. By Jensen's inequality (see Appendix \ref{sec:appendix_identities}) we have (\ref{eq:chap2_kl_divergence}) always non-negative, and it reaches zero iff.~$p = q$. Also it is clear that the KL divergence is asymmetric, i.e.~$\mathrm{KL}[p||q] \neq \mathrm{KL}[q||p]$. 
+%
+Historically, especially when used in approximate inference context, these two cases have been referred as the \emph{inclusive} KL divergence for $\mathrm{KL}[p||q]$, and the \emph{exclusive} KL divergence for $\mathrm{KL}[q||p]$. These names originate from the observation that fitting $q$ to $p$ by minimising these two KL divergences returns results of different behaviour, detailed as follows:
+%
+\begin{itemize}
+\item Fitting $q$ to $p$ by minimising $\mathrm{KL}[q||p]$: \\
+This KL divergence would emphasise assignment of \emph{low} probability mass of $q$ to the location where $p$ is very small, thus the name ``exclusive'' KL. Consider a region $S \in \Theta$ that has $q(\mparam) > 0$ but $p(\mparam) = 0$ for $\mparam \in S$, then this would make the integrand in (\ref{eq:chap2_kl_divergence}) infinity, thus the KL divergence assigns an extremely high cost to $q$ here. On the other hand, if $p(\mparam) > 0$ but $q(\mparam) = 0$, then the integrand restricted to the subset $S$ is zero, meaning that the cost for missing a region with positive $p$ mass is much lower. We also refer this property as ``zero-forcing'', or ``mode-seeking'' when $q$ is restricted to be uni-modal.
+
+\item Fitting $q$ to $p$ by minimising $\mathrm{KL}[p||q]$: \\
+Conversely, this KL divergence would emphasise assignment of \emph{high} probability mass of $q$ to the location where $p$ has positive mass, thus the name ``inclusive'' KL. Consider the case that $q(\mparam) > 0$ but $p(\mparam) = 0$, then this would make the integrand in (\ref{eq:chap2_kl_divergence}) zero. In contrast, if $p(\mparam) > 0$ but $q(\mparam) = 0$, then the integrand is infinity, meaning that the cost for missing a region with positive $p$ mass is extremely high. We also refer this property as ``mass-covering''.
+
+\end{itemize}
+
+Later we will see how these two KL divergences have been applied to approximate inference algorithms such as the widely used variational inference \citep{jordan:vi1999, beal:vi2003} and expectation propagation \citep{minka:ep2001}. But here we switch the topic to maximum likelihood estimation (MLE) \citep{fisher:mle1922} for a moment, in which we will show that MLE is also equivalent to minimising a KL divergence. For a given dataset $\data = \{\x_1, ..., \x_N \}$, define the empirical distribution as $\hat{p}_{\data}(\bm{x}) = \frac{1}{N} \sum_{n=1}^{N} \delta(\x - \x_n)$ where $\delta(\cdot)$ denotes the Dirac delta function. Then we want to fit the data with a parametric probabilistic model $p(\bm{x}|\mparam)$ using MLE:
+\begin{equation}
+\hat{\mparam}^{\text{ML}} = \argmax_{\mparam \in \Theta} \frac{1}{N} \sum_{n=1}^{N} \log p(\bm{x}_n | \mparam).
+\end{equation}
+Simple calculation reveals that maximising the log-likelihood of $\mparam$ is equivalent to minimising the KL divergence
+\begin{equation*}
+\hat{\mparam}^{\text{ML}} = \argmin_{\mparam \in \Theta} \mathrm{KL}[\hat{p}_{\mathcal{D}}(\bm{x}) || p(\bm{x}| \mparam) ] = \argmin_{\mparam \in \Theta} -\frac{1}{N} \sum_{n=1}^{N} \log p(\bm{x}_n | \mparam) + \text{const}.
+\end{equation*}
+MLE is widely used in all types of machine learning tasks, e.g.~learning generative models (Section \ref{sec:chap2_dgm}). 
+

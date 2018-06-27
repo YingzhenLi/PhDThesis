@@ -1,0 +1,52 @@
+It seems from the introduction of the divergences above that divergence minimisation is an excellent idea to obtain an accurate approximation to the target distribution, where the measure of ``accuracy'' is also represented by the choice of divergence. However direct divergence minimisation is still intractable, since that involves evaluating the target distribution itself. For example, consider minimising the exclusive KL divergence $\mathrm{KL}[q(\mparam) || p(\mparam| \mathcal{D}) ]$ to obtain the approximate posterior. But we still need to compute $p(\mparam|\mathcal{D})$, and in particular the marginal likelihood $p(\mathcal{D})$ which is intractable. In this section we discuss variational inference (VI) -- a widely used approximate inference algorithm -- which incorporates divergence minimisation in a smart way. To emphasise that the algorithm is applicable to more general cases beyond posterior approximation, we now write the \emph{target distribution} as
+\begin{equation*}
+p(\mparam) = \frac{1}{Z} p^*(\mparam), 
+\end{equation*}
+where $p^*(\theta)$ is the \emph{unnormalised} target distribution and $Z = \int p^*(\mparam) d\mparam$ is the \emph{normalising constant} or \emph{partition function}. In the posterior approximation context $p^*(\mparam) = p(\mparam, \mathcal{D})$ and $Z = p(\mathcal{D})$.
+
+\subsection{Kullback-Leibler divergence and variational free-energy}
+
+As already discussed, the exclusive KL divergence minimisation problem is intractable. Fortunately the minimiser of the exclusive KL can also be obtained by an equivalent minimisation problem of the so called \emph{variational free-energy} (VFE):
+$$ \argmin_{q} \mathrm{KL}[q(\mparam)||p(\mparam)] = \argmin_{q} \mathcal{F}_{\text{VFE}}(q; p),$$
+\begin{equation}
+\mathcal{F}_{\text{VFE}}(q; p) := \mathrm{KL}[q(\mparam)||p(\mparam)] - \log Z = \int q(\mparam) \log \frac{q(\mparam)}{p^*(\mparam)} d\mparam.
+\label{eq:chap2_vfe}
+\end{equation}
+%
+This is because the normalising constant $Z$ is independent with the approximation $q$, thus can be dropped in the exclusive KL. Historically the negative of the variational free-energy is also frequently discussed, which is named \emph{variational lower-bound} or \emph{evidence lower-bound (ELBO)} in the context of posterior approximation
+\begin{equation}
+\mathcal{L}_{\text{VI}}(q; p) := - \mathcal{F}_{\text{VFE}}(q; p) = \int q(\mparam) \log \frac{p^*(\mparam)}{q(\mparam)} d\mparam.
+\label{eq:chap2_vi_lowerbound}
+\end{equation}
+In posterior inference context (i.e.~$p^*(\mparam) = p(\data, \mparam) = p(\data | \mparam) p_0(\mparam)$) the following two formulations of the variational lower-bound have also been considered:
+\begin{equation}
+\mathcal{L}_{\text{VI}}(q; p) = \mathbb{E}_q[\log p(\data | \mparam)] - \mathrm{KL}[q(\mparam) || p_0(\mparam) ],
+\end{equation}
+%
+\begin{equation}
+\mathcal{L}_{\text{VI}}(q; p) = \mathbb{E}_q[\log p(\data, \mparam)] + \mathbb{H}[q(\mparam)].
+\end{equation}
+where $\mathbb{H}[q(\mparam)]$ is the Shannon entropy of the $q$ distribution.
+
+The lower-bound property comes from the fact that $\log Z \geq \mathcal{L}_{\text{VI}}(q; p)$, because of the non-negativity of KL divergence. Equivalently, this property can also be derived as follows: 
+%
+\begin{equation*}
+\begin{aligned}
+\log Z &= \log \int p^*(\mparam) d \mparam \\
+&= \log \int q(\mparam) \frac{p^*(\mparam)}{q(\mparam)} d \mparam \\
+&\geq \int q(\mparam) \log \frac{p^*(\mparam)}{q(\mparam)} d \mparam. \quad\quad \text{(Jensen's inequality)}
+\end{aligned}
+\end{equation*}
+Here Jensen's inequality (see appendix \ref{sec:appendix_identities}) is applied to the logarithm which is concave.
+%
+When posterior approximation is considered we also denote the two quantities as $\mathcal{F}_{\text{VFE}}(q; \mathcal{D})$ and $\mathcal{L}_{\text{VI}}(q; \mathcal{D})$, respectively. 
+%
+In summary, variational inference finds an approximation to the posterior through an \emph{optimisation} process, which is drastically different from sampling approaches that construct \emph{empirical point mass} distributions to describe the posterior.
+
+\subsubsection{A brief history of variational inference}
+Variational inference can be viewed as an application of \emph{variational methods} that mathematicians and physicists have studied for centuries. Historically, physicists mainly focused on mean-field theories for complex systems \citep{parisi:book1988},  whereas \cite{dempster:em1977} as statisticians proposed the famous \emph{expectation maximisation} (EM) algorithm that also has a VI interpretation \citep{neal:em1998}. Interestingly the pioneers of deep learning had also applied variational inference (though under other names) to Bayesian neural networks \citep{peterson:mean_field1987, hinton:mdl1993} that will be surveyed in the application section. Especially since the development of \citet{peterson:mean_field1987}, mean-field approximation started to be an attractive alternative to sampling methods for probabilistic inference in graphical models \citep{ghahramani:em_factorial1995, mackay:ensemblelearning1997}.
+
+However it was until \cite{saul:mean_field1996} which introduced the generic form of the variational lower-bound to explain the mean-field approximation. The first papers that I can find which coined the term ``variational inference'' are \cite{lawrence:vi1998} and \cite{jordan:vi1999}, where \cite{jordan:vi1999} provided a detailed summary of the previous work coming from the same group. Later on, researchers started to extend the variational principle to cases beyond graphical models, e.g.~the \emph{variational Bayes} (VB) algorithm \citep{attias:vb1999, attias:vb2000, ghahramani:variational2000, sato:vb2001, ghahramani:propagation2001, beal:vi2003} that is used to perform posterior approximations of the model parameters and even model selection.
+
+
+

@@ -1,0 +1,76 @@
+\section{Inference, integration and optimisation}
+\label{sec:approx_inference}
+Probabilistic modelling starts by defining a distribution of data. For instance, in discriminative supervised learning, one would define a conditional distribution $p(\y | \x, \mparam)$, which is also called the \emph{likelihood function} of $\mparam$. A concrete example for this would interpret $p(\y | \x, \mparam)$ as outputting the probability of a configuration of $\y$ (e.g.~a label or a real value) by transforming the input $\x$ (an image, a sentence, etc.) through a neural network parameterised by $\mparam$. Before observing any real-world data, the parameters $\mparam$ are unknown, but we have a prior belief $p_0(\mparam)$ about what value they might take, e.g.~they should have small $\ell_2$ norm if using a Gaussian prior centred at zero. Then we receive the observations $\data = \{ (\x_n, \y_n) \}_{n=1}^N$, and based on data we want to answer questions on the unknown parameters $\mparam$, for example: given $\data$, what is the most probable value of $\mparam$, and how likely is $\mparam$ to be set to a given value? Answering these questions is precisely the procedure of \emph{inference}: a procedure of deducing unknown properties (in our example the neural network weights) given the observed, or known information. 
+%
+
+\subsection{Exact Bayesian inference as integration}
+Bayesian statisticians are particularly interested in answering the second question, by computing the \emph{posterior distribution}, or the \emph{posterior belief} of $\mparam$ given $\data$, using Bayes' rule:
+\begin{equation}
+p(\mparam | \data) = \frac{p(\data | \mparam) p_0(\mparam)}{p(\data)},
+\label{eq:chap1_bayes_rule}
+\end{equation}
+with $p(\data | \mparam) = \prod_{n} p(\y_n | \x_n, \mparam)$ following the i.i.d.~assumption. The elegance of Bayes' rule is that \emph{it separates inference from modelling}. The model -- the prior distribution and the likelihood -- completely determines the posterior distribution, and the only thing left is to \emph{compute} the inference.
+%
+
+A closer look at Bayes' rule reveals that the core computation of Bayesian inference is \emph{integration}. Using the sum rule and product rule of probability distributions we have the marginal distribution computed as\footnote{In discrete variable case the integral is calculated w.r.t.~discrete measure, i.e.~summation, which will also be referred as integration in the rest of the thesis.}
+$$p(\data) = \int p(\data | \mparam) p_0(\mparam) d\mparam,$$
+and if this integral is tractable, then the posterior distribution can be easily computed by (\ref{eq:chap1_bayes_rule}). Moreover, to predict the label $\y^*$ on unseen datum $\x^*$ a Bayesian statistician would compute the \emph{predictive} distribution
+\begin{equation}
+p(\bm{y}^*|\bm{x}^*, \mathcal{D}) = \int p(\bm{y}^*|\bm{x}^*, \bm{\theta}) p(\bm{\theta}|\mathcal{D}) d\bm{\theta},
+\label{eq:chap1_bayesian_inference}
+\end{equation}
+which again requires solving an integration problem. Even more, since it is hard to visualise the posterior distribution in high dimensions, one would instead look at statistics of the posterior, for example
+$$ \text{posterior mean  } \mu = \int \mparam p(\mparam | \data) d \mparam, $$
+$$\text{posterior covariance matrix  } \Sigma = \int (\mparam -\mu) (\mparam - \mu)^{\text{T}} p(\mparam | \data) d \mparam,$$
+both are integration tasks as well. In summary, many tasks in Bayesian computation can be framed as computing an integral of some function $F(\mparam)$ against the posterior distribution:
+\begin{equation}
+\int F(\mparam) p(\mparam | \data) d \mparam,
+\label{eq:chap1_integral}
+\end{equation}
+and the goal of this thesis is to study how to perform this integration \emph{pragmatically and efficiently}.
+
+\subsection{Approximate Bayesian inference as optimisation}
+\label{sec:chap1_approx_infer}
+
+Having an integration task at hand, the first action I would take is to check my college calculus book with the hope of finding an analytical solution. Unfortunately, for a vast number of integrands and distributions, the integral (\ref{eq:chap1_integral}) does not exhibit an analytical form (or at least people have yet to discover it). This is particularly the case for neural networks: except for some limited special cases,\footnote{e.g.~the prior is Gaussian and the neural network only has one hidden layer with ReLU activation. See \cite{hernandez-lobato:pbp2015} for details.} in general the marginal probability is intractable, let alone the posterior and the predictive distribution.
+
+Instead of finding tractable forms of the integral, many mathematicians have their research careers dedicated to an alternative method: \emph{numerical integration}. Because in a continuous space one could never compute $F(\mparam)p(\mparam | \data)$ at \emph{all} locations then sum them up, instead methods such as discretisation and Monte Carlo are employed. The Monte Carlo idea is particularly interesting in our context: since the integral is computed against a probability distribution, a naive approach would first sample from the posterior $\mparam_k \sim p(\mparam_k | \data)$ then approximate the integral as
+\begin{equation}
+\int F(\mparam) p(\mparam | \data) \approx \frac{1}{K} \sum_{k=1}^K F(\mparam_k).
+\end{equation}
+However this simple Monte Carlo approach assumes that the posterior distribution is easy to draw samples from, which is again intractable in most scenarios. Statisticians have applied advanced sampling schemes to (approximately) draw samples from the posterior, including importance sampling, rejection sampling and Markov chain Monte Carlo (MCMC) \citep{gelman:dep2014}. Unfortunately, in high dimensions these methods are likely to require a considerable number of samples (if the random variables are highly correlated), and the simulation time for MCMC can be prohibitively long (e.g.~due to slow mixing).
+
+Now comes the brilliant idea of \emph{approximate inference}: can we find another distribution $q(\mparam)$ that makes the \emph{computation} of the integral $\int F(\mparam) q(\mparam) d\mparam$ comparably easier, and at the same time has minimal \emph{approximation error} to the exact integral we want? Concretely, using the knowledge of the functional form $F$ one can come up with a class of candidate distributions $\mathcal{Q}$, in which integrating $F$ w.r.t.~any $q \in \mathcal{Q}$ has analytical form or can be evaluated quickly with numerical methods. Then the only task here is to obtain the \emph{optimal} $q$ distribution in $\mathcal{Q}$ such that the $q$ integral is the most accurate approximation to the exact one. So in short, \emph{approximate inference} converts the integration problem of (Bayesian) inference into an \emph{optimisation} task. For example, an indirect\footnote{a direct method would consider minimising $\text{error}(\mathbb{E}_{q}[F], \mathbb{E}_p[F]) $, however that involves the exact integral and is mostly intractable.} approach for fitting the $q$ distribution would minimise a distance/divergence/discrepancy measure from the approximation to the exact posterior
+\begin{equation}
+q^*(\bm{\theta}) = \argmin_{q \in \mathcal{Q}} \mathrm{D}[q(\bm{\theta})||p(\bm{\theta}|\mathcal{D})].
+\end{equation}
+Note here the measure $\mathrm{D}[ \cdot || \cdot ]$ might not be symmetric. A popular choice for the divergence measure is the \emph{Kullback-Leibler divergence} \citep{kullback:divergence1951, kullback:information1959} which leads to the widely used \emph{variational inference} algorithm \citep{jordan:vi1999, ghahramani:variational2000, beal:vi2003}. 
+%
+In general an optimisation objective function $\mathcal{F}$ is designed to allow an accurate approximation to be obtained:
+\begin{equation}
+q^*(\bm{\theta}) = \argmin_{q \in \mathcal{Q}} \mathcal{F}(q(\bm{\theta}); p(\bm{\theta}|\mathcal{D})),
+\end{equation}
+which might not reflect a specific choice of divergence/discrepancy. Often this objective function $\mathcal{F}$ is crafted such that at the optimum, $\mathcal{F}^*$ can serve as an accurate approximation to the (log) marginal distribution, or \emph{model evidence} $\log p(\data)$ as well. A prevalent approach in this category considers constrained optimisation of the \emph{Bethe free energy} \citep{bethe:energy1935} that was first studied in statistical physics, which has also been shown as the underlying objective of another popular approach called \emph{belief propagation} \citep{pearl:bp1982}. All these methods are thoroughly discussed in Chapter \ref{chap:background}. Once $q$ is obtained, at prediction time the Bayesian predictive distribution (\ref{eq:chap1_bayesian_inference}) is approximated by 
+\begin{equation}
+p(\bm{y}^*|\bm{x}^*, \mathcal{D}) \approx \int p(\bm{y}^*|\bm{x}^*, \bm{\theta}) q(\mparam) d\bm{\theta}.
+\label{eq:chap1_approx_predictive_distribution}
+\end{equation}
+Other interesting quantities to be computed include the (approximated) \emph{Bayesian averaged prediction} $\y^*_{\text{avg}} = \mathbb{E}_{q}[\text{NN}_{\mparam}(\x^*)]$ if $p(\bm{y}^*|\bm{x}^*, \bm{\theta})$ is defined by a neural network $\y^*_{\text{pred}} = \text{NN}_{\mparam}(\x^*)$ that is parametrised by $\mparam$.
+
+\vspace{1em}
+\begin{tcolorbox}
+\textbf{Remark} (other inference methods)\textbf{.}
+Not all statisticians and engineers agree with the Bayesian modelling paradigm. For example, in deep learning a dominating method for training neural networks is \emph{loss function minimisation}, which first defines a loss function $\ell(\y, \hat{\y})$ between the true label $\y$ and the prediction $\hat{\y} = \text{NN}_{\mparam}(\x)$, then minimises the averaged loss computed on the dataset $\data$. Under fairly mild conditions we show in Section \ref{sec:chap2_bnn} that this corresponds to a \emph{maximum likelihood estimation} (MLE) \citep{fisher:mle1922} of the unknown parameters $\mparam$, which puts a uniform prior (which can be improper) on the weights $\mparam$. Also in many cases, adding regularisations such as the $\ell_2$ or $\ell_1$ regularisers corresponds to defining a prior distribution on $\mparam$, which turns the optimisation into a \emph{maximum a posteriori} (MAP) problem. Both cases can be framed in the variational inference framework with the $q$ distribution as a Dirac delta function.
+\end{tcolorbox}
+
+\vspace{1em}
+\begin{tcolorbox}
+\textbf{Remark} (direct approximations to the predictive distribution)\textbf{.}
+For Bayesian neural networks (introduced later) people are often more interested in the predictive distribution $p(\y^* | \x^*, \data)$. Indeed, \cite{snelson:compact2005} and \cite{korattikara:dark2015} considered training a parametric model $\hat{p}(\y| \x, \vparam)$ to form a direct approximation to $p(\y^* | \x^*, \data)$, where $p(\y^* | \x^*, \data)$ is (approximately) computed with a carefully tuned MCMC sampler. The approximation is done by \emph{distillation} \citep{hinton:distil2015}, which means the training data for the ``student model'' $\hat{p}(\y| \x, \vparam)$ is generated from the ``teacher model'' $p(\y^* | \x^*, \data)$. Although this approximation is arguably more direct, with an explicit approximation $q(\mparam) \approx p(\mparam | \data)$ one can perform many (approximate) integration tasks with different $F(\mparam)$ functions at the same time.
+\end{tcolorbox}
+
+\vspace{1em}
+\begin{tcolorbox}
+\textbf{Remark} (a comparison to Bayesian quadrature)\textbf{.}
+Another important technique for approximating integrals is \emph{Bayesian quadrature} \citep{ohagan:bayesian_quadrature1991, kennedy:bq1996, ghahramani:bayesianMC2003}, which has attracted a lot of attention as well and has been expanded to form part of an emerging research field called \emph{probabilistic numerics}.\footnote{\url{http://www.probabilistic-numerics.org/}} Here we note that, Bayesian quadrature and the approximate inference methods discussed above, address different intractability issues in integration tasks. Typically, Bayesian quadrature assumes the analytical form of the function $F$ is unknown or very expensive to evaluate, and builds a probabilistic model (e.g.~Gaussian process) for $F$ given samples from the target distribution $p$. Approximate inference, on the other hand, constructs approximate distributions to the intractable distribution $p$, and considers tractable functions $F$ instead. In short, both approaches can be categorised as \emph{model-based approximate integration}, with the only difference that they fit approximations to different components of the integrand. Readers are also referred to e.g.~approximate Bayesian computation \citep{beaumont:abc2002} for those integrands without tractable $F$ and $p$, and in this thesis we only study approximate inference methods and assume $F$ is analytic and cheap to compute for a given configuration.
+\end{tcolorbox}

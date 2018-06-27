@@ -1,0 +1,40 @@
+\subsection{Amari's $\alpha$-divergences}
+\label{sec:chap2_alpha_divergence}
+
+Besides the KL divergence, do we have other choices of divergences for approximate inference? Certainly there are, and here we review a rich class of them called \emph{$\alpha$-divergences}. Interestingly there exist multiple (slightly) different definitions of $\alpha$-divergences, and in the sequel we will formally introduce the version that will be the focus of this chapter. Before that I provide a short (and possibly incomplete) history for these developments in below.
+
+Just after a year of the proposal of the KL-divergence, statistician Herman Chernoff introduced a test statistic for the likelihood-ratio test \citep{chernoff:alpha1952}, and at the end of the paper, he linked the proposed technique to a divergence measure that is computed by the infimum of an integral. That integral has later been referred as the \emph{Chernoff} $\alpha$-coefficient 
+$$\int p(\mparam)^{\alpha} q(\mparam)^{1 - \alpha} d\mparam, \quad \alpha \in (0, 1),$$
+which is used in all later variants of $\alpha$-divergences. 
+
+In 1961, mathematician Alfr{\'e}d R{\'e}nyi argued that, by removing the additivity requirement, Shannon entropy can be further generalised to many interesting cases \citep{renyi:divergence1961}. He proposed one of such entropy definitions, and then characterised the induced mutual information and relative entropy measures using his version of $\alpha$-divergence.\footnote{The KL divergence characterises the corresponding mutual information and relative entropy measures for Shannon entropy. } These two quantities are now referred to \emph{R{\'e}nyi entropy} and \emph{R{\'e}nyi divergence}, respectively, and the latter will be employed as the divergence tool in Chapter \ref{chap:vrbound}. Perhaps surprisingly, R{\'e}nyi's definition of $\alpha$-divergence also contains the Chernoff $\alpha$-coefficient, although these two developments are rather independent.
+
+In the 70s-80s of the 20th century, differential geometry was introduced to statistics, e.g.~see \cite{efron:curvature1975, efron:geometry_expfam1978, amari:ig1985}, which studies the geometric properties of the manifold obtained by mapping $\mathcal{P}$ to the parameter space $\Theta$. In particular, researchers were interested in the geometrical properties of \emph{exponential family} distributions (introduced later) and the corresponding divergences that reflect these features. In this context, mathematician Shun-ichi Amari introduced his version of $\alpha$-divergence \citep{amari:geometry1982, amari:ig1985}, by generalising the application of Chernoff $\alpha$-coefficient to $\alpha \in \mathbb{R}$.
+\begin{definition}
+(Amari's $\alpha$-divergence)
+Amari's $\alpha$-divergence $\mathrm{D}_{\alpha}^{A}[\cdot || \cdot]: \mathcal{P} \times \mathcal{P} \rightarrow \mathbb{R}$, parameterised by $\alpha \in \{\alpha :  \mathcal{D}_{\alpha}^{A}[p||q] < +\infty \}$, is defined as
+\begin{align}
+\mathrm{D}_{\alpha}^{A}[p||q] = \frac{4}{ 1 - \alpha^2 } \left( 1 - \int p(\bm{\theta})^{\frac{1 + \alpha}{2}} q(\bm{\theta})^{\frac{1 - \alpha}{2}} d\bm{\theta}\right), \quad \alpha \neq \pm 1, \\
+\mathrm{D}_{1}^{A}[p||q] := \lim_{\alpha \rightarrow 1} \mathrm{D}_{\alpha}^{A}[p||q] = \mathrm{KL}[p||q], \quad \alpha = 1, \\
+\mathrm{D}_{-1}^{A}[p||q] := \lim_{\alpha \rightarrow -1} \mathrm{D}_{\alpha}^{A}[p||q] = \mathrm{KL}[q||p], \quad \alpha = -1.
+\end{align}
+\end{definition}
+
+In Amari's career he used $\alpha$-divergence as a tool to study the geometry of distribution manifolds, and in particular, he claimed in \cite{amari:divergence2009} that his definition is the only divergence that belongs to both the $f$-divergences \citep{csiszar:divergence1963} (related to information theory) and Bregman divergences \citep{bregman:divergence1967} (related to geometry). These properties are not directly related to approximate inference, and we only discuss them in Appendix \ref{sec:appendix_other_divergence}.
+
+\vspace{1em}
+\begin{tcolorbox}
+\textbf{Remark} (Other $\alpha$-divergence definitions)\textbf{.}
+There exist other definitions of $\alpha$-divergence, and some of them are detailed here.
+\begin{itemize}
+\item R{\'e}nyi's $\alpha$-divergence \citep{renyi:divergence1961} (defined on $\alpha \neq 1, \alpha > 0$):
+$$\mathrm{D}_{\alpha}^{R}[p||q] = \frac{1}{\alpha - 1} \log \int p(\bm{\theta})^{\alpha} q(\bm{\theta})^{1 - \alpha} d\bm{\theta}.$$
+By continuity in $\alpha$ we can show that $\lim_{\alpha \rightarrow 1} \mathrm{D}_{\alpha}^{R}[p||q] = \mathrm{KL}[p||q]$. We defer the detailed introduction of R{\'e}nyi's definition to Section \ref{sec:chap4_vrbound_renyi_divergence}.
+%
+\item Tsallis's $\alpha$-divergence \citep{tsallis:divergence1988} (defined on $\alpha \neq 1$):
+$$\mathrm{D}_{\alpha}^{T}[p||q] = \frac{1}{\alpha - 1} \left( \int p(\bm{\theta})^{\alpha} q(\bm{\theta})^{1 - \alpha} d\bm{\theta} - 1\right).$$ 
+Again by continuity in $\alpha$ we can show that $\lim_{\alpha \rightarrow 1} \mathrm{D}_{\alpha}^{T}[p||q] = \mathrm{KL}[p||q]$. 
+%
+\end{itemize}
+
+\end{tcolorbox}

@@ -1,0 +1,40 @@
+%*******************************************************************************
+%****************************** Second Chapter *********************************
+%*******************************************************************************
+
+\chapter{Divergences, Algorithms and Applications}
+\label{chap:background}
+
+\ifpdf
+    \graphicspath{{Chapter2/Figs/Raster/}{Chapter2/Figs/PDF/}{Chapter2/Figs/}}
+\else
+    \graphicspath{{Chapter2/Figs/Vector/}{Chapter2/Figs/}}
+\fi
+
+\input{Chapter2/intro}
+
+\section{Statistical divergences for probability distributions}
+\input{Chapter2/divergence/kl_divergence}
+\input{Chapter2/divergence/alpha_divergence}
+
+\section{Variational inference with KL-divergence}
+\label{sec:energy}
+% Kullback-Leibler divergence and variational free energy
+\input{Chapter2/vi/vfe}
+\input{Chapter2/vi/mean_field}
+\input{Chapter2/vi/mcvi}
+\input{Chapter2/amortisation}
+% EP and power EP
+\section{Expectation propagation with $\alpha$-divergences}
+\input{Chapter2/ep/factorgraph}
+\input{Chapter2/ep/expfam}
+\input{Chapter2/ep/ep_intro}
+\input{Chapter2/ep/solve_multiplier}
+% comparison
+\input{Chapter2/comparison}
+
+\section{Applications: Bayesian deep learning}
+\input{Chapter2/bayesianDL/dgm}
+\input{Chapter2/bayesianDL/bnn}
+
+\input{Chapter2/summary}

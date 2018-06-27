@@ -1,0 +1,32 @@
+\section{R{\'e}nyi's $\alpha$-divergence}
+
+\label{sec:chap4_vrbound_renyi_divergence}
+We first review R{\'e}nyi's $\alpha$-divergence \citep{renyi:divergence1961, van_erven:renyi2014}. R{\'e}nyi's $\alpha$-divergence, defined on $\{\alpha: \alpha > 0, \alpha \neq 1, |\mathrm{D}_{\alpha}^{R}| < +\infty \}$, measures the ``closeness'' of two distributions $p$ and $q$ on a random variable $\bm{\theta} \in \Theta$:
+\begin{equation}
+\label{eq:renyi_divergence}
+\mathrm{D}_{\alpha}^{R} [p || q] = \frac{1}{\alpha - 1} \log \int p(\bm{\theta})^{\alpha} q(\bm{\theta})^{1 - \alpha} d \mu.
+\end{equation}
+Here the constraint $|D^{R}_{\alpha}[p||q]| < +\infty$ is crucial for rewriting the divergence as the expectation under $p$ or $q$ (i.e. to change the measure from $d\mu$ to $dP$ or $dQ$), i.e. 
+$$D_{\alpha}[p||q] = \frac{1}{\alpha - 1} \log \mathbb{E}_{p} \left[ \left( \frac{p(\bm{\theta})}{q(\bm{\theta})}   \right)^{\alpha - 1} \right] = \frac{1}{\alpha - 1} \log \mathbb{E}_{q} \left[ \left( \frac{p(\bm{\theta})}{q(\bm{\theta})}   \right)^{\alpha} \right],$$
+since it is possible that the definition (\ref{eq:renyi_divergence}) is infinity but one of the above expectations is finite. In the following we will use $d\mu = d\bm{\theta}$ w.l.o.g.
+
+The definition is extended to $\alpha = 0, 1, +\infty$ by continuity. We note that when $\alpha \rightarrow 1$ the Kullback-Leibler (KL) divergence is recovered, which plays a crucial role in machine learning and information theory. Some other special cases are presented in Table \ref{tab:renyi_example}. The method proposed in this work also considers $\alpha \leq 0$ (although (\ref{eq:renyi_divergence}) is no longer a divergence for these $\alpha$ values), and we include from \cite{van_erven:renyi2014} some useful properties for forthcoming derivations.
+%
+\begin{prop}
+(Monotonicity) R{\'e}nyi's $\alpha$-divergence definition (\ref{eq:renyi_divergence}), extended to negative $\alpha$, is \textbf{continuous} and \textbf{non-decreasing} on $\alpha \in \{\alpha: -\infty < \mathrm{D}_{\alpha}^{R} < +\infty \}$.
+\label{prop:renyi_divergence}
+\end{prop}
+%
+\begin{prop}
+(Skew symmetry) For $\alpha \not\in \{0, 1\}$, 
+$
+\mathrm{D}_{\alpha}^{R} [p || q] = \frac{\alpha}{1 - \alpha} \mathrm{D}_{1 - \alpha}^{R} [q || p].
+$
+This implies $\mathrm{D}_{\alpha}^{R} [p || q] \leq 0$ for $\alpha < 0$. For the limiting case $\mathrm{D}_{-\infty}^{R} [p || q] = -\mathrm{D}_{+\infty}^{R} [q || p]$.
+\label{prop:skew_symmetry}
+\end{prop}
+%
+%
+\input{Chapter4/vrbound/tables/renyi_example}
+%
+A critical question that is still in active research is how to choose a divergence in this rich family to obtain optimal solution for a particular application, an issue which is discussed in Section \ref{sec:chap4_vrbound_opt_mc}.
